@@ -1,0 +1,8 @@
+{
+  "allowScripts": {
+    "puppeteer": true
+  },
+  "dependencies": {
+    "puppeteer": "^25.10.0"
+  }
+}

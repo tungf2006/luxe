@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Luxe – Nền tảng quản lý tài chính cá nhân. Theo dõi chi tiêu, quản lý ngân sách và rèn luyện thói quen tài chính tốt với những hiểu biết đẹp mắt." />
+  <meta name="theme-color" content="#080C15" />
+  <title>Luxe – Tài chính được quản lý đẹp mắt</title>
+
+  <!-- Preconnect Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- ===== SITE HEADER ===== -->
+  <header class="site-header" role="banner">
+    <div class="container">
+      <nav class="nav-wrapper" aria-label="Main navigation">
+        <!-- Brand -->
+        <a href="#" class="brand-logo" id="logo-btn" data-page="dashboard" aria-label="Luxe Home">
+          <div class="brand-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+              <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+          </div>
+           <span>Luxe</span>
+           <span class="brand-badge">PRO</span>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <div class="main-nav" id="main-nav" role="navigation">
+          <a class="nav-link" id="nav-dashboard" data-page="dashboard" href="#" role="menuitem">
+            <span class="nav-dot" aria-hidden="true"></span>
+            Bảng điều khiển
+          </a>
+          <a class="nav-link" id="nav-transactions" data-page="transactions" href="#" role="menuitem">
+            <span class="nav-dot" aria-hidden="true"></span>
+            Giao dịch
+          </a>
+          <a class="nav-link" id="nav-budgets" data-page="budgets" href="#" role="menuitem">
+            <span class="nav-dot" aria-hidden="true"></span>
+            Ngân sách
+          </a>
+          <a class="nav-link" id="nav-reports" data-page="reports" href="#" role="menuitem">
+            <span class="nav-dot" aria-hidden="true"></span>
+            Báo cáo
+          </a>
+          <a class="nav-link" id="nav-settings" data-page="settings" href="#" role="menuitem">
+            <span class="nav-dot" aria-hidden="true"></span>
+            Cài đặt
+          </a>
+        </div>
+
+        <!-- Header Actions -->
+        <div class="header-actions">
+          <button class="btn-add-transaction" id="open-add-tx-modal" data-open-modal="add-tx-modal" aria-label="Thêm giao dịch mới">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Thêm giao dịch
+          </button>
+
+          <!-- Notification -->
+          <button class="user-avatar-btn" id="notif-btn" style="width:40px;height:40px;position:relative;" aria-label="Thông báo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-secondary)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span class="avatar-online" aria-hidden="true"></span>
+          </button>
+
+          <!-- Avatar -->
+          <button class="user-avatar-btn" id="avatar-btn" aria-label="Tài khoản người dùng">
+            <div style="width:100%;height:100%;background:linear-gradient(135deg,#6366F1,#38BDF8);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:0.875rem;color:white;">
+              AK
+            </div>
+          </button>
+
+          <!-- Mobile Toggle -->
+          <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Chuyển đổi thanh điều hướng" aria-expanded="false">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main-content" id="main-content" role="main">
+    <div class="container">
+      <!-- All page content is rendered here by feature modules -->
+      <div id="page-container"></div>
+    </div>
+  </main>
+
+  <!-- ===== MODAL OVERLAY (content generated by transactionForm.js) ===== -->
+  <div class="modal-overlay" id="add-tx-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
+    <div class="modal-dialog">
+      <!-- Form generated by src/features/transactions/transactionForm.js -->
+    </div>
+  </div>
+
+  <!-- ===== TOAST CONTAINER ===== -->
+  <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ===== APP SCRIPT (ES Module) ===== -->
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
