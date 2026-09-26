@@ -61,3 +61,55 @@ src/
 ## Testing
 
 Tests use Puppeteer (the only npm dependency) against the live dev server.
+
+## Headroom Integration (Context Compression)
+
+This project is integrated with [Headroom](https://github.com/headroomlabs-ai/headroom) for context compression during development.
+
+### Setup
+
+Headroom CLI is installed as a uv tool. The proxy runs on `http://127.0.0.1:8787`.
+
+### Usage
+
+When working with AI agents (Claude Code, Copilot, etc.), route through the Headroom proxy:
+```bash
+# Claude Code
+ANTHROPIC_BASE_URL=http://127.0.0.1:8787 claude
+
+# Codex / OpenAI compatible
+OPENAI_BASE_URL=http://127.0.0.1:8787/v1 your-app
+```
+
+### MCP Server
+
+The `.mcp.json` file configures the Headroom MCP server for AI agents that support MCP:
+- `headroom_compress` - Compress messages before sending to an LLM
+- `headroom_retrieve` - Retrieve original (uncompressed) messages
+- `headroom_stats` - View compression statistics
+
+### Memory
+
+Cross-agent memory is enabled for persistent context across sessions. View and manage memories:
+```bash
+headroom memory list
+headroom memory stats
+```
+
+### Output Token Reduction
+
+Headroom's output shaper is enabled (`HEADROOM_OUTPUT_SHAPER=1`) to reduce verbose agent responses.
+
+### Dashboard
+
+View live savings statistics:
+```bash
+headroom dashboard  # http://127.0.0.1:8787/dashboard
+```
+
+### Learn from Failed Sessions
+
+After debugging failed development sessions, run:
+```bash
+headroom learn --verbosity --apply  # Writes corrections to CLAUDE.local.md (gitignored)
+```

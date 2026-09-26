@@ -5,8 +5,9 @@
 const puppeteer = require('puppeteer');
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
   const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 800 });
 
   // Capture console errors
   const errors = [];
@@ -15,13 +16,17 @@ const puppeteer = require('puppeteer');
   page.on('pageerror', err => errors.push(err.message));
   page.on('requestfailed', req => errors.push(`Request failed: ${req.url()}`));
 
+  // Log all requests
+  page.on('request', req => console.log(`→ Request: ${req.url()}`));
+  page.on('response', res => console.log(`← Response: ${res.url()} ${res.status()}`));
+
   try {
     // 1. Load the homepage
     console.log('→ Loading http://localhost:3000 ...');
-    await page.goto('http://localhost:3000', { waitUntil: 'networkidle0', timeout: 10000 });
+    await page.goto('http://localhost:3000', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     // 2. Check for errors
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 2000));
     if (errors.length) {
       console.error('❌ Console errors:', errors);
     } else {
@@ -70,10 +75,50 @@ const puppeteer = require('puppeteer');
     await page.click('#nav-settings');
     await new Promise(r => setTimeout(r, 1000));
 
-    const hasSettings = await page.$('#settings-content') !== null;
+    const hasSettings = await page.$('.settings-shell') !== null;
     console.log(hasSettings ? '✅ Settings page rendered' : '❌ Settings page missing');
 
-    // 8. Test Add Transaction modal
+    // 8. Navigate to Goals
+    console.log('→ Navigating to Goals...');
+    await page.click('#nav-goals');
+    await new Promise(r => setTimeout(r, 2000));
+
+    const hasGoalsGrid = await page.$('#goals-grid') !== null;
+    console.log(hasGoalsGrid ? '✅ Goals grid rendered' : '❌ Goals grid missing');
+
+    const goalCards = await page.$$('.goal-card');
+    console.log(`→ Found ${goalCards.length} goal cards`);
+    const hasGoalCards = goalCards.length > 0;
+    console.log(hasGoalCards ? '✅ Goal cards rendered' : '❌ Goal cards missing');
+
+    // 9. Navigate to Accounts
+    console.log('→ Navigating to Accounts...');
+    await page.click('#nav-accounts');
+    await new Promise(r => setTimeout(r, 2000));
+
+    const hasAccountsGrid = await page.$('#accounts-grid') !== null;
+    console.log(hasAccountsGrid ? '✅ Accounts grid rendered' : '❌ Accounts grid missing');
+
+    const accountCards = await page.$$('.account-card');
+    console.log(`→ Found ${accountCards.length} account cards`);
+    const hasAccountCards = accountCards.length > 0;
+    console.log(hasAccountCards ? '✅ Account cards rendered' : '❌ Account cards missing');
+
+    // 10. Navigate to Recurring
+    console.log('→ Navigating to Recurring...');
+    await page.click('#nav-recurring');
+    await new Promise(r => setTimeout(r, 1000));
+
+    const hasMonthlyTotal = await page.$('#recurring-monthly-cost') !== null;
+    console.log(hasMonthlyTotal ? '✅ Recurring monthly total KPI rendered' : '❌ Recurring monthly total missing');
+
+    const hasUpcomingPanel = await page.$('#recurring-upcoming-panel') !== null;
+    console.log(hasUpcomingPanel ? '✅ Recurring upcoming panel rendered' : '❌ Recurring upcoming panel missing');
+
+    const hasRecurringTable = await page.$('#recurring-tbody') !== null;
+    console.log(hasRecurringTable ? '✅ Recurring table rendered' : '❌ Recurring table missing');
+
+    // 11. Test Add Transaction modal
     console.log('→ Testing Add Transaction modal...');
     await page.click('#open-add-tx-modal');
     await new Promise(r => setTimeout(r, 500));
@@ -91,7 +136,14 @@ const puppeteer = require('puppeteer');
 
     await page.type('#tx-merchant', 'Test Merchant');
     await page.type('#tx-amount', '42.50');
-    await page.select('#tx-category', 'Food');
+    await page.select('#tx-account', 'a01');
+    await page.select('#tx-category', 'food');
+    await page.evaluate(() => {
+      const date = document.querySelector('#tx-date');
+      date.value = new Date().toISOString().slice(0, 10);
+      date.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await page.waitForSelector('#confirm-add-tx:not([disabled])', { timeout: 5000 });
     await page.click('#confirm-add-tx');
     await new Promise(r => setTimeout(r, 1000));
 

@@ -1,0 +1,710 @@
+{
+  "nav": {
+    "dashboard": "Tổng quan",
+    "transactions": "Giao dịch",
+    "budgets": "Ngân sách",
+    "reports": "Báo cáo",
+    "goals": "Mục tiêu",
+    "recurring": "Giao dịch định kỳ",
+    "accounts": "Tài khoản",
+    "settings": "Cài đặt",
+    "addTransaction": "Thêm giao dịch",
+    "sidebar": {
+      "navLabelDashboard": "Tổng quan",
+      "navLabelTransactions": "Giao dịch",
+      "navLabelBudgets": "Ngân sách",
+      "navLabelReports": "Báo cáo",
+      "navLabelGoals": "Mục tiêu",
+      "navLabelRecurring": "Giao dịch định kỳ",
+      "navLabelAccounts": "Tài khoản",
+      "navLabelSettings": "Cài đặt"
+    },
+    "mobileMore": {
+      "reports": "Báo cáo",
+      "goals": "Mục tiêu",
+      "recurring": "Giao dịch định kỳ",
+      "accounts": "Tài khoản",
+      "settings": "Cài đặt"
+    }
+  },
+  "app": {
+    "loading": "Đang tải Luxe...",
+    "signingOut": "Đang đăng xuất...",
+    "welcomeUser": "Người dùng",
+    "noPage": "Trang không tồn tại.",
+    "failedToLoadPage": "Không thể tải trang",
+    "tryAgain": "Thử lại",
+    "errorOccurred": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "topbarSearch": "Tìm kiếm...",
+    "topbarSearchAria": "Tìm kiếm toàn cục",
+    "notifications": "Thông báo",
+    "3Unread": "3 thông báo chưa đọc",
+    "userMenu": {
+      "profile": "Hồ sơ",
+      "settings": "Cài đặt",
+      "logout": "Đăng xuất"
+    },
+    "aria": {
+      "mainNav": "Điều hướng chính",
+      "bottomNav": "Điều hướng dưới cùng",
+      "mobileMore": "Menu thêm",
+      "addTransaction": "Thêm giao dịch mới",
+      "logo": "Luxe Trang chủ",
+      "addTxMob": "Thêm giao dịch",
+      "viewMore": "Xem thêm",
+      "openNav": "Mở điều hướng"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Chào mừng trở lại",
+      "subtitle": "Đăng nhập để quản lý tài chính cá nhân của bạn",
+      "emailLabel": "Email",
+      "passwordLabel": "Mật khẩu",
+      "emailPlaceholder": "you@example.com",
+      "passwordPlaceholder": "........",
+      "submit": "Đăng nhập",
+      "or": "Hoặc",
+      "google": "Tiếp tục với Google",
+      "register": "Đăng ký ngay",
+      "forgot": "Quên mật khẩu?",
+      "validation": {
+        "emailEmpty": "Email không được để trống.",
+        "emailInvalid": "Email không hợp lệ.",
+        "passwordEmpty": "Mật khẩu không được để trống.",
+        "passwordMin": "Mật khẩu phải có ít nhất 6 ký tự."
+      }
+    },
+    "register": {
+      "title": "Tạo tài khoản mới",
+      "subtitle": "Bắt đầu quản lý tài chính thông minh cùng Luxe",
+      "nameLabel": "Họ và tên",
+      "namePlaceholder": "Nguyễn Văn A",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Mật khẩu",
+      "passwordPlaceholder": "Tối thiểu 6 ký tự",
+      "confirmLabel": "Xác nhận mật khẩu",
+      "confirmPlaceholder": "Nhập lại mật khẩu",
+      "termsText": "Tôi đồng ý với",
+      "termsLink": "Điều khoản dịch vụ",
+      "privacyLink": "Chính sách bảo mật",
+      "submit": "Đăng ký",
+      "alreadyHave": "Đã có tài khoản?",
+      "loginLink": "Đăng nhập",
+      "validation": {
+        "nameEmpty": "Họ và tên không được để trống.",
+        "nameMin": "Họ và tên phải có ít nhất 2 ký tự.",
+        "confirmEmpty": "Vui lòng nhập lại mật khẩu.",
+        "confirmMismatch": "Mật khẩu xác nhận không khớp."
+      }
+    },
+    "forgot": {
+      "title": "Quên mật khẩu?",
+      "subtitle": "Nhập email của bạn để nhận hướng dẫn đặt lại mật khẩu",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "submit": "Gửi yêu cầu",
+      "success": "✓ Kiểm tra email của bạn để đặt lại mật khẩu.",
+      "back": "Quay lại đăng nhập",
+      "validation": {
+        "emailInvalid": "Email không hợp lệ."
+      }
+    },
+    "verifyEmail": {
+      "title": "Xác minh email",
+      "subtitle": "Chúng tôi đã gửi một liên kết xác minh đến email của bạn.",
+      "text": "Vui lòng kiểm tra hộp thư email của bạn và nhấn vào liên kết để xác minh tài khoản.",
+      "resend": "Gửi lại email xác minh",
+      "resending": "Đang gửi...",
+      "sent": "Đã gửi lại!",
+      "back": "Quay lại đăng nhập"
+    },
+    "resetPassword": {
+      "title": "Đặt lại mật khẩu",
+      "subtitle": "Nhập mật khẩu mới cho tài khoản của bạn",
+      "newPasswordLabel": "Mật khẩu mới",
+      "newPasswordPlaceholder": "Tối thiểu 6 ký tự",
+      "confirmLabel": "Xác nhận mật khẩu",
+      "confirmPlaceholder": "Nhập lại mật khẩu mới",
+      "submit": "Đặt lại mật khẩu",
+      "success": "✓ Mật khẩu đã được cập nhật thành công!",
+      "back": "Quay lại đăng nhập"
+    },
+    "redirecting": "Đang chuyển hướng...",
+    "mockNotice": "Chế độ mô phỏng — nhập bất kỳ email/mật khẩu nào để tiếp tục",
+    "showPassword": "Hiện/ẩn mật khẩu"
+  },
+  "onboarding": {
+    "steps": {
+      "basicInfo": "Thông tin cơ bản",
+      "currency": "Đơn vị tiền tệ",
+      "accounts": "Tài khoản tài chính",
+      "goals": "Mục tiêu sử dụng Luxe"
+    },
+    "stepTitle": {
+      "basicInfo": "Thông tin cơ bản",
+      "currency": "Đơn vị tiền tệ",
+      "accounts": "Tài khoản tài chính",
+      "goals": "Mục tiêu sử dụng Luxe"
+    },
+    "stepDesc": {
+      "basicInfo": "Cho chúng tôi biết bạn là ai để cá nhân hóa trải nghiệm.",
+      "currency": "Chọn đơn vị tiền tệ bạn muốn sử dụng.",
+      "accounts": "Thêm tài khoản tài chính chính của bạn (tùy chọn).",
+      "goals": "Bạn muốn đạt được gì với Luxe?"
+    },
+    "progressText": "Bước {{step}} / {{total}}",
+    "basicInfo": {
+      "nameLabel": "Họ và tên",
+      "namePlaceholder": "Nguyễn Văn A",
+      "markComplete": "Đánh dấu hoàn thành sau bước này"
+    },
+    "accountTypes": {
+      "checking": "Tài khoản thanh toán",
+      "savings": "Tài khoản tiết kiệm",
+      "credit": "Thẻ tín dụng",
+      "investment": "Đầu tư"
+    },
+    "accountForm": {
+      "nameLabel": "Tên tài khoản",
+      "namePlaceholder": "Ví dụ: Ví Momo, Thẻ Vietcombank...",
+      "typeLabel": "Loại tài khoản",
+      "balanceLabel": "Số dư ban đầu",
+      "balancePlaceholder": "0",
+      "skip": "Bỏ qua bước này, tôi sẽ thêm sau"
+    },
+    "usageGoals": {
+      "save": "Chiết kiệm tiền nhiều hơn",
+      "track": "Theo dõi chi tiêu hàng tháng",
+      "budget": "Ngân sách hợp lý",
+      "debt": "Tránh nợ thái nhiều",
+      "invest": "Lập kế hoạch đầu tư",
+      "other": "Tổng quan tài chính cá nhân"
+    },
+    "actions": {
+      "back": "Quay lại",
+      "next": "Tiếp theo",
+      "complete": "Hoàn thành",
+      "skip": "Bỏ qua",
+      "skipAll": "Bỏ qua tất cả"
+    },
+    "welcomeNotification": "Chào mừng đến với Luxe!",
+    "welcomeMessage": "Chúc mừng bạn đã hoàn thành hướng dẫn. Mục tiêu: {{goal}}",
+    "loginAgain": "Vui lòng đăng nhập lại."
+  },
+  "dashboard": {
+    "hero": {
+      "tagline": "Danh mục sống động · {{date}}",
+      "headline": "Tiền của bạn,<br>được quản lý đẹp mắt.",
+      "subheadline": "Theo dõi chi tiêu, quản lý ngân sách và rèn luyện thói quen tài chính tốt."
+    },
+    "kpi": {
+      "totalBalance": "Tổng số dư",
+      "income": "Thu nhập",
+      "expenses": "Chi phí",
+      "savingsRate": "Tỷ lệ tiết kiệm",
+      "soThangTruoc": "so với tháng trước",
+      "compareRange": "so với {{range}}",
+      "noComparison": "Chưa có dữ liệu so sá̵",
+      "flat": "Không thay đổi",
+      "good": "tốt",
+      "bad": "xấu",
+      "netChange": "Dòng tiền mạnh",
+      "largestExpense": "Chi phí lớn nhất",
+      "payDay": "Ngày nhận lương",
+      "noExpenseThisMonth": "Không có chi phí trong tháng này",
+      "totalBalanceTooltip": "Số dư = tổng số dư tất cả tài khoản. Tăng là tốt.",
+      "incomeTooltip": "Thu nhập = tổng giao dịch thu nhập trong tháng. Tăng là tốt.",
+      "expensesTooltip": "Chi phí = tổng giao dịch chi phí trong tháng. Giảm là tốt, tăng là xấu.",
+      "savingsRateTooltip": "Tỷ lệ tiết kiệm = (thu nhập − chi phí) / thu nhập × 100. Tăng là tốt."
+    },
+    "spending": {
+      "title": "Tổng quan chi tiêu",
+      "subtitle": "Thu nhập vs Chi phí",
+      "week": "Tuần",
+      "month": "Tháng",
+      "incomeLabel": "Thu nhập",
+      "expenseLabel": "Chi phí"
+    },
+    "recentTx": {
+      "title": "Giao dịch gần đây",
+      "subtitle": "7 ngày qua",
+      "viewAll": "Xem tất cả",
+      "viewAllAria": "Xem tất cả giao dịch",
+      "headers": {
+        "merchant": "Người thu",
+        "category": "Danh mục",
+        "date": "Ngày",
+        "amount": "Số tiền"
+      },
+      "empty": "Không có giao dịch gần đây.",
+      "noExpense": "Không có chi phí trong tháng này"
+    },
+    "budgetProgress": {
+      "title": "Tiến trình ngân sách",
+      "empty": "Chưa có ngân sách nào cho giai đoạn này.",
+      "noBudget": "Chưa có ngân sách nào.",
+      "manage": "Quản lý",
+      "manageAria": "Quản lý ngân sách",
+      "overviewTitle": "Tổng quan hàng tháng",
+      "strongCashFlow": "Dòng tiền mạnh",
+      "categoryName": "Tên danh mục",
+      "categoryBudget": "danh mục ngân sách"
+    },
+    "insight": {
+      "tag": "Phân tích AI"
+    },
+    "monthlyOverview": {
+      "title": "Tổng quan hàng tháng",
+      "subtitleFormat": "Tháng {{month}} {{year}}"
+    },
+    "chartEmpty": {
+      "title": "Chưa có giao dịch nào",
+      "descriptionWeek": "Chưa có giao dịch nào trong tuần này",
+      "descriptionMonth": "Chưa có giao dịch nào trong tháng này",
+      "actionText": "Thêm giao dịch"
+    },
+    "error": {
+      "loadFailed": "Không thể tải nội dung này.",
+      "retry": "Thử lại"
+    }
+  },
+  "transactions": {
+    "pageTitle": "Giao dịch",
+    "pageDesc": "Lịch sử đầy đủ hoạt động tài chính của bạn",
+    "exportCSV": "Xuất CSV",
+    "addTx": "Thêm giao dịch",
+    "summary": {
+      "totalIncome": "Tổng thu",
+      "totalExpense": "Tổng chi",
+      "netBalance": "Số dư ròng",
+      "filter": "theo bộ lọc",
+      "incomeExpense": "thu – chi"
+    },
+    "filters": {
+      "searchPlaceholder": "Tìm kiếm giao dịch…",
+      "searchAria": "Tìm kiếm giao dịch",
+      "filterTypeAria": "Lọc theo loại",
+      "filterCategoryAria": "Lọc theo danh mục",
+      "filterMonthAria": "Lọc theo tháng",
+      "allMonths": "Tất cả tháng",
+      "allTypes": "Tất cả loại",
+      "allCategories": "Tất cả danh mục",
+      "income": "Thu nhập",
+      "expense": "Chi phí",
+      "all": "Tất cả"
+    },
+    "table": {
+      "headers": {
+        "merchant": "Người thu",
+        "category": "Danh mục",
+        "date": "Ngày",
+        "payment_method": "Phương thức",
+        "amount": "Số tiền",
+        "action": "Hành động"
+      },
+      "empty": "Không có giao dịch nào khớp với bộ lọc của bạn.",
+      "showing": "Hiển thị {{count}} / {{total}} giao dịch",
+      "page": "Trang {{page}} / {{total}}",
+      "prev": "← Trước",
+      "next": "Sau →",
+      "prevAria": "Trang trước",
+      "nextAria": "Trang sau",
+      "deleteAria": "Xóa giao dịch {{merchant}}"
+    },
+    "delete": {
+      "confirm": "Xóa \"{{merchant}}\"?",
+      "deleted": "Giao dịch đã bị xóa.",
+      "toastMsg": "Giao dịch đã bị xóa."
+    },
+    "csvExported": "Đã xuất CSV thành công!",
+    "filteredReport": "Báo cáo đã lọc theo {{period}}",
+    "exportFailed": "Không thể xuất tệp CSV.",
+    "exportTitle": "Xuất CSV"
+  },
+  "transactionForm": {
+    "modalTitleEdit": "Sửa giao dịch",
+    "modalTitleAdd": "Thêm giao dịch",
+    "closeAria": "Đóng cửa sổ",
+    "type": {
+      "label": "Loại",
+      "expense": "↓ Chi phí",
+      "income": "↑ Thu nhập",
+      "aria": "Loại giao dịch"
+    },
+    "fields": {
+      "merchant": {
+        "label": "Người thu / Ghi chú",
+        "placeholder": "ví dụ: Starbucks"
+      },
+      "amount": {
+        "label": "Số tiền",
+        "placeholder": "0.00"
+      },
+      "category": {
+        "label": "Danh mục",
+        "placeholder": "Chọn danh mục"
+      },
+      "date": {
+        "label": "Ngày"
+      }
+    },
+    "cancel": "Hủy",
+    "saveEdit": "Lưu thay đổi",
+    "save": "Lưu giao dịch",
+    "validation": {
+      "merchantEmpty": "Vui lòng nhập tên người thu.",
+      "amountInvalid": "Vui lòng nhập số tiền hợp lệ.",
+      "categoryEmpty": "Vui lòng chọn danh mục.",
+      "dateEmpty": "Vui lòng chọn ngày."
+    },
+    "addedToast": "Giao dịch đã thêm: {{amount}} · {{merchant}}"
+  },
+  "budgets": {
+    "pageTitle": "Ngân sách",
+    "pageDesc": "Theo dõi và kiểm soát giới hạn chi tiêu của bạn",
+    "addBudget": "Đặt ngân sách mới",
+    "addBudgetAria": "Đặt ngân sách mới",
+    "summary": {
+      "totalBudget": "Tổng ngân sách",
+      "totalSpent": "Tổng chi",
+      "remaining": "Còn lại",
+      "categories": "Danh mục",
+      "inMonth": "trong tháng",
+      "ofBudget": "của ngân sách",
+      "activeBudgets": "ngân sách đang hoạt động",
+      "exceeded": "vượt ngân sách",
+      "left": "còn lại"
+    },
+    "empty": {
+      "text": "Chưa có ngân sách nào. Tạo một ngân sách để bắt đầu theo dõi."
+    },
+    "card": {
+      "usedPct": "đã dùng",
+      "spent": "đã chi",
+      "budgeted": "trong ngân sách",
+      "exceeded": "vượt ngân sách",
+      "nearLimit": "Gần giới hạn — chỉ còn {{amount}} cho {{category}} trong tháng này.",
+      "limit": "Giới hạn"
+    },
+    "comingSoon": "Tính năng tạo ngân sách sẽ sớm được ra mắt.",
+    "legend": {
+      "ariaLabel": "Chú thích màu tiến trình ngân sách",
+      "label": "Thang màu:",
+      "ok": "< 60%",
+      "lowWarning": "60–74%",
+      "warning": "75–89%",
+      "danger": "90–100%",
+      "over": "> 100%"
+    }
+  },
+  "reports": {
+    "pageTitle": "Báo cáo",
+    "pageDesc": "Những hiểu biết sâu về sức khỏe tài chính của bạn",
+    "downloadReport": "Tải xuống",
+    "downloadAria": "Tải báo cáo xuống",
+    "cashFlow": {
+      "title": "Dòng tiền",
+      "subtitle": "Thu nhập vs Chi phí"
+    },
+    "categoryBreakdown": {
+      "title": "Phân bổ danh mục",
+      "subtitle": "Phân phối chi tiêu"
+    },
+    "netWorth": {
+      "title": "Tăng trưởng tài sản",
+      "subtitle": "6 tháng gần đây",
+      "moreData": "Cần thêm dữ liệu để vẽ xu hướng",
+      "increase": "tăng",
+      "decrease": "giảm"
+    },
+    "reportExported": "Báo cáo đã được xuất thành công!",
+    "reportFiltered": "Báo cáo đã lọc theo {{period}}",
+    "reportPeriodAria": "Chọn khoảng thời gian báo cáo",
+    "noData": "Không có dữ liệu dòng tiền",
+    "addTransaction": "Hãy thêm giao dịch thu nhập hoặc chi phí để xem phân tích dòng tiền"
+  },
+  "goals": {
+    "pageTitle": "Mục tiêu",
+    "pageDesc": "Theo dõi tiến độ và đạt được mục tiêu của bạn",
+    "addGoal": "Thêm mục tiêu",
+    "addGoalAria": "Thêm mục tiêu",
+    "empty": {
+      "text": "Chưa có mục tiêu tài chính nào.",
+      "addFirst": "Tạo mục tiêu đầu tiên"
+    },
+    "goalCard": {
+      "deadline": "Dự kiến hoàn thành: {{date}}",
+      "completed": "Hoàn thành",
+      "inProgress": "Đang thực hiện",
+      "saved": "Đã tích lũy",
+      "target": "Mục tiêu",
+      "remaining": "Còn thiếu"
+    },
+    "overview": {
+      "title": "Tổng quan mục tiêu",
+      "subtitle": "{{count}} mục tiêu",
+      "totalSaved": "Tổng đã tích lũy",
+      "active": "Mục tiêu đang chạy",
+      "closest": "Gần hoàn thành nhất",
+      "none": "Chưa có mục tiêu nào",
+      "ofTotal": "tổng số mục tiêu"
+    },
+    "toast": {
+      "comingSoon": "Tính năng tạo mục tiêu sẽ sớm được ra mắt."
+    }
+  },
+  "recurring": {
+    "pageTitle": "Giao dịch định kỳ",
+    "pageDesc": "Quản lý các khoản thu chi lặp lại hàng tháng",
+    "addRecurring": "Thêm giao dịch định kỳ",
+    "addRecurringAria": "Thêm giao dịch định kỳ",
+    "summary": {
+      "title": "Tổng chi định kỳ hàng tháng",
+      "footer": "chi phí lặp lại"
+    },
+    "upcoming": {
+      "title": "Sắp đến hạn (30 ngày)",
+      "none": "Không có khoản nào",
+      "noUpcoming": "Không có giao dịch định kỳ nào trong 30 ngày tới."
+    },
+    "table": {
+      "title": "Giao dịch định kỳ",
+      "headers": {
+        "name": "Tên",
+        "category": "Danh mục",
+        "frequency": "Tần suất",
+        "nextDate": "Ngày tiếp theo",
+        "amount": "Số tiền",
+        "status": "Trạng thái"
+      },
+      "empty": "Chưa có giao dịch định kỳ nào.",
+      "monthly": "Hàng tháng",
+      "weekly": "Hàng tuần",
+      "yearly": "Hàng năm",
+      "active": "Đang hoạt động",
+      "inactive": "Đã tắt",
+      "daysAway": "{{days}} ngày tới"
+    },
+    "toast": {
+      "comingSoon": "Tính năng tạo giao dịch định kỳ sẽ sớm được ra mắt."
+    }
+  },
+  "accounts": {
+    "pageTitle": "Tài khoản",
+    "pageDesc": "Quản lý tất cả tài khoản và ví của bạn",
+    "addAccount": "Thêm tài khoản",
+    "addAccountAria": "Thêm tài khoản",
+    "addFirstAccountAria": "Thêm tài khoản đầu tiên",
+    "summary": {
+      "totalBalance": "Tổng số dư",
+      "allAccounts": "tất cả tài khoản",
+      "accountCount": "Số tài khoản",
+      "linked": "đang liên kết"
+    },
+    "empty": {
+      "text": "Chưa có tài khoản nào. Thêm tài khoản để bắt đầu theo dõi số dư."
+    },
+    "card": {
+      "typeChecking": "Thanh toán",
+      "typeSavings": "Tiết kiệm",
+      "typeCredit": "Thẻ tín dụng",
+      "edit": "Sửa",
+      "delete": "Xoá",
+      "accountOptions": "Tùy chọn tài khoản"
+    },
+    "balanceChart": {
+      "title": "Phân bổ số dư",
+      "subtitle": "Tỷ lệ giữa các tài khoản",
+      "totalSuffix": "TỔNG SỐ DƯ"
+    },
+    "toast": {
+      "accountSoon": "Tính năng thêm tài khoản sẽ sớm được ra mắt.",
+      "editAccount": "Sửa tài khoản {{id}} - tính năng sẽ sớm ra mắt.",
+      "deleteAccount": "Xoá tài khoản {{id}} - tính năng sẽ sớm ra mắt."
+    }
+  },
+  "settings": {
+    "pageTitle": "Cài đặt",
+    "pageDesc": "Quản lý tài khoản và tuỳ chọn ứng dụng",
+    "tabs": {
+      "profile": "Hồ sơ",
+      "financial": "Tài chính",
+      "notifications": "Thông báo",
+      "appearance": "Giao diện",
+      "security": "Bảo mật"
+    },
+    "sections": {
+      "avatar": "Ảnh đại diện",
+      "personal": "Thông tin cá nhân",
+      "currency": "Tiền tệ & Định dạng",
+      "budget": "Kỳ ngân sách",
+      "categories": "Danh mục",
+      "alerts": "Cảnh báo",
+      "reports": "Báo cáo",
+      "theme": "Chủ đề",
+      "effects": "Hiệu ứng",
+      "password": "Mật khẩu",
+      "advanced": "Bảo mật nâng cao",
+      "sessions": "Phiên đăng nhập",
+      "danger": "Vùng nguy hiểm"
+    },
+    "profile": {
+      "changePhoto": "Đổi ảnh",
+      "firstName": "Họ",
+      "lastName": "Tên",
+      "email": "Email",
+      "phone": "Số điện thoại",
+      "timezone": "Múi giờ",
+      "firstNamePlaceholder": "Họ",
+      "lastNamePlaceholder": "Tên",
+      "emailReadonly": "readonly data-dirty=\"profile\"",
+      "phonePlaceholder": "+84 xxx xxx xxx"
+    },
+    "financial": {
+      "currency": "Đơn vị tiền tệ",
+      "currencyDesc": "Áp dụng cho toàn bộ số dư và báo cáo",
+      "numberFormat": "Định dạng số",
+      "numberFormatDesc": "Cách hiển thị số lớn",
+      "budgetStart": "Ngày bắt đầu kỳ",
+      "budgetStartDesc": "Ngày trong tháng kỳ ngân sách bắt đầu",
+      "addCategory": "Thêm danh mục",
+      "edit": "Sửa",
+      "delete": "Xoá"
+    },
+    "notifications": {
+      "budgetWarning": "Cảnh báo vượt ngân sách",
+      "budgetWarningDesc": "Thông báo khi chi tiêu vượt 80% hạn mức bất kỳ danh mục nào",
+      "recurringBills": "Nhắc hoá đơn định kỳ",
+      "recurringBillsDesc": "Nhắc nhở trước 3 ngày khi hoá đơn định kỳ đến hạn",
+      "largeTx": "Cảnh báo giao dịch lớn",
+      "largeTxDesc": "Cảnh báo khi có giao dịch vượt quá 500.000₫",
+      "monthlyReport": "Báo cáo hàng tháng",
+      "monthlyReportDesc": "Nhận tóm tắt tài chính vào đầu mỗi tháng",
+      "weeklySummary": "Tóm tắt hàng tuần",
+      "weeklySummaryDesc": "Bản tóm tắt ngắn mỗi Chủ nhật",
+      "aiInsights": "Đề xuất AI",
+      "aiInsightsDesc": "Mẹo tài chính cá nhân và phát hiện bất thường"
+    },
+    "appearance": {
+      "dark": "🌙 Tối",
+      "light": "☀️ Sáng",
+      "system": "💻 Hệ thống",
+      "themeDesc": "Chọn chủ đề sáng, tối hoặc theo hệ thống",
+      "accent": "Màu nhấn",
+      "accentDesc": "Màu chính sử dụng trên toàn giao diện",
+      "animations": "Hiệu ứng hoạt hình",
+      "animationsDesc": "Bật chuyển tiếp và hoạt ảnh mượt mà",
+      "compact": "Chế độ gọn",
+      "compactDesc": "Giảm khoảng cách để hiển thị nhiều thông tin hơn"
+    },
+    "security": {
+      "changePassword": "Đổi mật khẩu",
+      "currentPassword": "Mật khẩu hiện tại",
+      "newPassword": "Mật khẩu mới",
+      "confirmPassword": "Xác nhận mật khẩu mới",
+      "currentPlaceholder": "••••••••",
+      "newPlaceholder": "Tối thiểu 8 ký tự",
+      "confirmPlaceholder": "Nhập lại mật khẩu",
+      "twoFactor": "Xác thực hai yếu tố",
+      "twoFactorDesc": "Yêu cầu mã xác nhận mỗi lần đăng nhập",
+      "sessions": {
+        "current": "Hiện tại",
+        "ago1": "2 giờ trước",
+        "revoke": "Thu hồi",
+        "revokeAll": "Thu hồi tất cả phiên khác"
+      },
+      "deleteAccount": "Xoá tài khoản",
+      "deleteAccountDesc": "Xoá vĩnh viễn tài khoản và toàn bộ dữ liệu. Không thể hoàn tác.",
+      "dangerZone": "Vùng nguy hiểm"
+    },
+    "device": {
+      "chromeWin": "Chrome trên Windows",
+      "safariIphone": "Safari trên iPhone",
+      "locationHanoi": "Hà Nội, VN",
+      "locationHcm": "TP.HCM, VN",
+      "now": "Hiện tại"
+    },
+    "unsaved": "Bạn có thay đổi chưa được lưu",
+    "discard": "Huỷ",
+    "saveChanges": "Lưu thay đổi",
+    "saved": "Cài đặt đã được lưu!",
+    "enabled": "Đã bật",
+    "disabled": "Đã tắt",
+    "toasts": {
+      "photoSoon": "Tính năng tải ảnh sẽ sớm ra mắt.",
+      "addCatSoon": "Tính năng thêm danh mục sẽ sớm ra mắt.",
+      "editCat": "Sửa danh mục \"{{id}}\" — sắp ra mắt.",
+      "deleteCat": "Đã xoá danh mục \"{{id}}\".",
+      "deleteCatConfirm": "Xoá danh mục \"{{id}}\"? Giao dịch hiện tại sẽ không bị ảnh hưởng.",
+      "sessionRevoked": "Phiên đã bị thu hồi.",
+      "allSessionsRevoked": "Tất cả phiên khác đã bị thu hồi.",
+      "accountDeleted": "Tài khoản đã bị xoá. Dữ liệu đã được đặt lại.",
+      "passwordUpdated": "Mật khẩu đã được cập nhật!",
+      "passwordRequired": "Vui lòng nhập mật khẩu mới.",
+      "passwordMismatch": "Mật khẩu xác nhận không khớp.",
+      "themeChanged": "Giao diện {{theme}} đã bật",
+      "accentChanged": "Màu nhấn đã thay đổi"
+    }
+  },
+  "charts": {
+    "bar": {
+      "legendIncome": "Thu nhập",
+      "legendExpense": "Chi phí",
+      "ariaLegend": "Chú thích biểu đồ",
+      "loading": "Đang tải biểu đồ dòng tiền",
+      "empty": {
+        "title": "Chưa có dữ liệu dòng tiền",
+        "sub": "Hãy thêm giao dịch thu nhập hoặc chi phí để xem phân tích dòng tiền"
+      },
+      "tooltipIncome": "Thu nhập:",
+      "tooltipExpense": "Chi phí:",
+      "tooltipNet": "Dòng tiền ròng:",
+      "netLabel": "Dòng tiền ròng:",
+      "noDataChart": "Không có dữ liệu biểu đồ"
+    },
+    "donut": {
+      "empty": "Chưa có chi tiêu trong tháng này",
+      "totalSub": "TỔNG CHI",
+      "ariaChart": "Biểu đồ tròn phân bổ chi tiêu theo danh mục",
+      "ariaLegend": "Chỉ mục danh mục",
+      "noData": "Không có dữ liệu"
+    },
+    "area": {
+      "title": "Biểu đồ chi tiêu",
+      "description": "Biểu đồ hiển thị thu nhập và chi phí qua thời gian"
+    },
+    "netWorth": {
+      "tooltipLabel": "{{label}}: {{amount}}"
+    }
+  },
+  "toast": {
+    "success": "Thành công",
+    "warning": "Cảnh báo",
+    "info": "Thông tin",
+    "error": "Lỗi"
+  },
+  "insights": {
+    "nearLimit": "đã dùng {{pct}}% ngân sách",
+    "remaining": "Chỉ còn {{amount}} cho {{category}} trong tháng này. Cắt giảm chi tiêu để tránh vượt ngân sách.",
+    "saving": "Bạn đang tiết kiệm {{rate}}% thu nhập",
+    "savingDetail": "Tiết kiệm được {{net}} từ thu nhập {{income}} trong tháng này.",
+    "overspent": "Chi tiêu ({{expenses}}) đã vượt thu nhập ({{income}})",
+    "overspentDetail": "Bạn đang chi tiêu nhiều hơn thu nhập. Hãy xem xét cắt giảm chi phí không cần thiết.",
+    "noTransactions": "Theo dõi giao dịch đầu tiên để xem phân tích",
+    "noTransactionsDetail": "Thêm thu nhập hoặc chi phí để bắt đầu.",
+    "actionReports": "Xem báo cáo chi tiêu",
+    "actionReports2": "Xem báo cáo",
+    "actionBudgets": "Xem ngân sách {{category}}",
+    "budgetProgress": "đã dùng {{pct}}% ngân sách",
+    "budgetRemaining": "Chỉ còn {{amount}} cho {{category}} trong tháng này. Cắt giảm chi tiêu để tránh vượt ngân sách."
+  },
+  "common": {
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "monthShort": "Tháng {{monthNum}}, {{year}}",
+    "currency": "VND",
+    "others": "Khác"
+  }
+}

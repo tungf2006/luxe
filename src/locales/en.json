@@ -1,0 +1,709 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "transactions": "Transactions",
+    "budgets": "Budgets",
+    "reports": "Reports",
+    "goals": "Goals",
+    "recurring": "Recurring",
+    "accounts": "Accounts",
+    "settings": "Settings",
+    "addTransaction": "Add Transaction",
+    "sidebar": {
+      "navLabelDashboard": "Dashboard",
+      "navLabelTransactions": "Transactions",
+      "navLabelBudgets": "Budgets",
+      "navLabelReports": "Reports",
+      "navLabelGoals": "Goals",
+      "navLabelRecurring": "Recurring",
+      "navLabelAccounts": "Accounts",
+      "navLabelSettings": "Settings"
+    },
+    "mobileMore": {
+      "reports": "Reports",
+      "goals": "Goals",
+      "recurring": "Recurring",
+      "accounts": "Accounts",
+      "settings": "Settings"
+    }
+  },
+  "app": {
+    "loading": "Loading Luxe...",
+    "signingOut": "Signing out...",
+    "welcomeUser": "Luxe User",
+    "noPage": "Page not found.",
+    "failedToLoadPage": "Failed to load page",
+    "tryAgain": "Try again",
+    "errorOccurred": "An error occurred. Please try again.",
+    "topbarSearch": "Search...",
+    "topbarSearchAria": "Global search",
+    "notifications": "Notifications",
+    "3Unread": "3 unread notifications",
+    "userMenu": {
+      "profile": "Profile",
+      "settings": "Settings",
+      "logout": "Log out"
+    },
+    "aria": {
+      "mainNav": "Main navigation",
+      "bottomNav": "Bottom navigation",
+      "mobileMore": "More menu",
+      "addTransaction": "Add new transaction",
+      "logo": "Luxe Home",
+      "addTxMob": "Add transaction",
+      "viewMore": "View more",
+      "openNav": "Open navigation"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Sign in to manage your personal finances",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "emailPlaceholder": "you@example.com",
+      "passwordPlaceholder": "........",
+      "submit": "Sign In",
+      "or": "Or",
+      "google": "Continue with Google",
+      "register": "Sign up now",
+      "forgot": "Forgot password?",
+      "validation": {
+        "emailEmpty": "Email is required.",
+        "emailInvalid": "Invalid email address.",
+        "passwordEmpty": "Password is required.",
+        "passwordMin": "Password must be at least 6 characters."
+      }
+    },
+    "register": {
+      "title": "Create Account",
+      "subtitle": "Start managing your finances smartly with Luxe",
+      "nameLabel": "Full Name",
+      "namePlaceholder": "Nguyen Van A",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Minimum 6 characters",
+      "confirmLabel": "Confirm Password",
+      "confirmPlaceholder": "Enter password again",
+      "termsText": "I agree to",
+      "termsLink": "Terms of Service",
+      "privacyLink": "Privacy Policy",
+      "submit": "Sign Up",
+      "alreadyHave": "Already have an account?",
+      "loginLink": "Sign In",
+      "validation": {
+        "nameEmpty": "Full name is required.",
+        "nameMin": "Full name must be at least 2 characters.",
+        "confirmEmpty": "Please re-enter your password.",
+        "confirmMismatch": "Passwords do not match."
+      }
+    },
+    "forgot": {
+      "title": "Forgot Password?",
+      "subtitle": "Enter your email to receive password reset instructions",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "submit": "Send Request",
+      "success": "✓ Check your email to reset your password.",
+      "back": "Back to sign in",
+      "validation": {
+        "emailInvalid": "Invalid email address."
+      }
+    },
+    "verifyEmail": {
+      "title": "Verify Email",
+      "subtitle": "We have sent a verification link to your email.",
+      "text": "Please check your email inbox and click the link to verify your account.",
+      "resend": "Resend Verification Email",
+      "resending": "Sending...",
+      "sent": "Sent!",
+      "back": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "subtitle": "Enter your new password for your account",
+      "newPasswordLabel": "New Password",
+      "newPasswordPlaceholder": "Minimum 6 characters",
+      "confirmLabel": "Confirm New Password",
+      "confirmPlaceholder": "Enter new password again",
+      "submit": "Reset Password",
+      "success": "✓ Password updated successfully!",
+      "back": "Back to sign in"
+    },
+    "redirecting": "Redirecting...",
+    "mockNotice": "Demo mode — enter any email/password to continue",
+    "showPassword": "Show/Hide Password"
+  },
+  "onboarding": {
+    "steps": {
+      "basicInfo": "Basic Info",
+      "currency": "Currency",
+      "accounts": "Financial Accounts",
+      "goals": "Usage Goals"
+    },
+    "stepTitle": {
+      "basicInfo": "Basic Info",
+      "currency": "Currency",
+      "accounts": "Financial Accounts",
+      "goals": "Usage Goals"
+    },
+    "stepDesc": {
+      "basicInfo": "Tell us who you are to personalize your experience.",
+      "currency": "Choose your preferred currency.",
+      "accounts": "Add your primary financial account (optional).",
+      "goals": "What do you want to achieve with Luxe?"
+    },
+    "progressText": "Step {{step}} / {{total}}",
+    "basicInfo": {
+      "nameLabel": "Full Name",
+      "namePlaceholder": "Nguyen Van A",
+      "markComplete": "Mark complete after this step"
+    },
+    "accountTypes": {
+      "checking": "Checking Account",
+      "savings": "Savings Account",
+      "credit": "Credit Card",
+      "investment": "Investment"
+    },
+    "accountForm": {
+      "nameLabel": "Account Name",
+      "namePlaceholder": "e.g., Momo Wallet, Vietcombank Card...",
+      "typeLabel": "Account Type",
+      "balanceLabel": "Initial Balance",
+      "balancePlaceholder": "0",
+      "skip": "Skip this step, I will add later"
+    },
+    "usageGoals": {
+      "save": "Save more money",
+      "track": "Track monthly expenses",
+      "budget": "Reasonable budget",
+      "debt": "Avoid excessive debt",
+      "invest": "Investment planning",
+      "other": "Personal financial overview"
+    },
+    "actions": {
+      "back": "Go Back",
+      "next": "Next",
+      "complete": "Complete",
+      "skip": "Skip",
+      "skipAll": "Skip All"
+    },
+    "welcomeNotification": "Welcome to Luxe!",
+    "welcomeMessage": "Congratulations on completing the onboarding. Goal: {{goal}}",
+    "loginAgain": "Please sign in again."
+  },
+  "dashboard": {
+    "hero": {
+      "tagline": "Vibrant categories · {{date}}",
+      "headline": "Your money,<br>beautifully managed.",
+      "subheadline": "Track spending, manage budgets, and build good financial habits."
+    },
+    "kpi": {
+      "totalBalance": "Total Balance",
+      "income": "Income",
+      "expenses": "Expenses",
+      "savingsRate": "Savings Rate",
+      "soThangTruoc": "vs last month",
+      "compareRange": "vs {{range}}",
+      "noComparison": "No comparison data",
+      "flat": "No change",
+      "good": "good",
+      "bad": "bad",
+      "netChange": "Strong Cash Flow",
+      "largestExpense": "Largest Expense",
+      "payDay": "Payday",
+      "noExpenseThisMonth": "No expenses this month",
+      "totalBalanceTooltip": "Balance = total of all account balances. An increase is good.",
+      "incomeTooltip": "Income = total income transactions this month. An increase is good.",
+      "expensesTooltip": "Expenses = total expense transactions this month. A decrease is good, an increase is bad.",
+      "savingsRateTooltip": "Savings rate = (income − expenses) / income × 100. An increase is good."
+    },
+    "spending": {
+      "title": "Spending Overview",
+      "subtitle": "Income vs Expenses",
+      "week": "Week",
+      "month": "Month",
+      "incomeLabel": "Income",
+      "expenseLabel": "Expenses"
+    },
+    "recentTx": {
+      "title": "Recent Transactions",
+      "subtitle": "Last 7 days",
+      "viewAll": "View All",
+      "viewAllAria": "View all transactions",
+      "headers": {
+        "merchant": "Merchant",
+        "category": "Category",
+        "date": "Date",
+        "amount": "Amount"
+      },
+      "empty": "No recent transactions.",
+      "noExpense": "No expenses this month"
+    },
+    "budgetProgress": {
+      "title": "Budget Progress",
+      "empty": "No budgets for this period.",
+      "noBudget": "No budgets.",
+      "manage": "Manage",
+      "manageAria": "Manage budgets",
+      "overviewTitle": "Monthly Overview",
+      "strongCashFlow": "Strong Cash Flow",
+      "categoryName": "Category Name",
+      "categoryBudget": "category budget"
+    },
+    "insight": {
+      "tag": "AI Analysis"
+    },
+    "monthlyOverview": {
+      "title": "Monthly Overview",
+      "subtitleFormat": "Month {{month}} {{year}}"
+    },
+    "chartEmpty": {
+      "title": "No transactions yet",
+      "descriptionWeek": "No transactions this week",
+      "descriptionMonth": "No transactions this month",
+      "actionText": "Add Transaction"
+    },
+    "error": {
+      "loadFailed": "Could not load this content.",
+      "retry": "Retry"
+    }
+  },
+  "transactions": {
+    "pageTitle": "Transactions",
+    "pageDesc": "Complete history of your financial activity",
+    "exportCSV": "Export CSV",
+    "addTx": "Add Transaction",
+    "summary": {
+      "totalIncome": "Total Income",
+      "totalExpense": "Total Expense",
+      "netBalance": "Net Balance",
+      "filter": "filtered",
+      "incomeExpense": "income – expense"
+    },
+    "filters": {
+      "searchPlaceholder": "Search transactions…",
+      "searchAria": "Search transactions",
+      "filterTypeAria": "Filter by type",
+      "filterCategoryAria": "Filter by category",
+      "filterMonthAria": "Filter by month",
+      "allMonths": "All Months",
+      "allTypes": "All Types",
+      "allCategories": "All Categories",
+      "income": "Income",
+      "expense": "Expense",
+      "all": "All"
+    },
+    "table": {
+      "headers": {
+        "merchant": "Merchant",
+        "category": "Category",
+        "date": "Date",
+        "status": "Status",
+        "amount": "Amount",
+        "action": "Action"
+      },
+      "empty": "No transactions match your filters.",
+      "showing": "Showing {{count}} / {{total}} transactions",
+      "page": "Page {{page}} / {{total}}",
+      "prev": "← Prev",
+      "next": "Next →",
+      "prevAria": "Previous page",
+      "nextAria": "Next page",
+      "deleteAria": "Delete transaction {{merchant}}"
+    },
+    "delete": {
+      "confirm": "Delete \"{{merchant}}\"?",
+      "deleted": "Transaction has been deleted.",
+      "toastMsg": "Transaction has been deleted."
+    },
+    "csvExported": "CSV exported successfully!",
+    "filteredReport": "Report filtered by {{period}}",
+    "exportFailed": "Failed to export CSV file.",
+    "exportTitle": "Export CSV"
+  },
+  "transactionForm": {
+    "modalTitleEdit": "Edit Transaction",
+    "modalTitleAdd": "Add Transaction",
+    "closeAria": "Close window",
+    "type": {
+      "label": "Type",
+      "expense": "↓ Expense",
+      "income": "↑ Income",
+      "aria": "Transaction Type"
+    },
+    "fields": {
+      "merchant": {
+        "label": "Merchant / Note",
+        "placeholder": "e.g.: Starbucks"
+      },
+      "amount": {
+        "label": "Amount",
+        "placeholder": "0.00"
+      },
+      "category": {
+        "label": "Category",
+        "placeholder": "Choose category"
+      },
+      "date": {
+        "label": "Date"
+      }
+    },
+    "cancel": "Cancel",
+    "saveEdit": "Save Changes",
+    "save": "Save Transaction",
+    "validation": {
+      "merchantEmpty": "Please enter a merchant name.",
+      "amountInvalid": "Please enter a valid amount.",
+      "categoryEmpty": "Please select a category.",
+      "dateEmpty": "Please select a date."
+    },
+    "addedToast": "Transaction added: {{amount}} · {{merchant}}"
+  },
+  "budgets": {
+    "pageTitle": "Budgets",
+    "pageDesc": "Track and control your spending limits",
+    "addBudget": "Set New Budget",
+    "addBudgetAria": "Set new budget",
+    "summary": {
+      "totalBudget": "Total Budget",
+      "totalSpent": "Total Spent",
+      "remaining": "Remaining",
+      "categories": "Categories",
+      "inMonth": "this month",
+      "ofBudget": "of budget",
+      "activeBudgets": "active budgets",
+      "exceeded": "over budget",
+      "left": "left"
+    },
+    "empty": {
+      "text": "No budgets yet. Create one to start tracking."
+    },
+    "card": {
+      "usedPct": "used",
+      "spent": "spent",
+      "budgeted": "of budget",
+      "exceeded": "over budget",
+      "nearLimit": "Near limit — only {{amount}} left for {{category}} this month.",
+      "limit": "Limit"
+    },
+    "comingSoon": "Budget creation feature coming soon.",
+    "legend": {
+      "ariaLabel": "Budget progress color legend",
+      "label": "Color scale:",
+      "ok": "< 60%",
+      "lowWarning": "60–74%",
+      "warning": "75–89%",
+      "danger": "90–100%",
+      "over": "> 100%"
+    }
+  },
+  "reports": {
+    "pageTitle": "Reports",
+    "pageDesc": "Deep insights into your financial health",
+    "downloadReport": "Download",
+    "downloadAria": "Download report",
+    "cashFlow": {
+      "title": "Cash Flow",
+      "subtitle": "Income vs Expenses"
+    },
+    "categoryBreakdown": {
+      "title": "Category Breakdown",
+      "subtitle": "Expense Distribution"
+    },
+    "netWorth": {
+      "title": "Asset Growth",
+      "subtitle": "Last 6 months",
+      "moreData": "More data needed to plot trend",
+      "increase": "increase",
+      "decrease": "decrease"
+    },
+    "reportExported": "Report exported successfully!",
+    "reportFiltered": "Report filtered by {{period}}",
+    "reportPeriodAria": "Select report period",
+    "noData": "No cash flow data",
+    "addTransaction": "Add income or expense transactions to see cash flow analysis"
+  },
+  "goals": {
+    "pageTitle": "Goals",
+    "pageDesc": "Track progress and achieve your goals",
+    "addGoal": "Add Goal",
+    "addGoalAria": "Add new goal",
+    "empty": {
+      "text": "No financial goals yet.",
+      "addFirst": "Create your first goal"
+    },
+    "goalCard": {
+      "deadline": "Expected completion: {{date}}",
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "saved": "Saved",
+      "target": "Target",
+      "remaining": "Remaining"
+    },
+    "overview": {
+      "title": "Goals Overview",
+      "subtitle": "{{count}} goals",
+      "totalSaved": "Total Saved",
+      "active": "Active Goals",
+      "closest": "Closest to Completion",
+      "none": "No goals yet",
+      "ofTotal": "of total goals"
+    },
+    "toast": {
+      "comingSoon": "Goal creation feature coming soon."
+    }
+  },
+  "recurring": {
+    "pageTitle": "Recurring Transactions",
+    "pageDesc": "Manage recurring income and expenses",
+    "addRecurring": "Add Recurring Transaction",
+    "addRecurringAria": "Add recurring transaction",
+    "summary": {
+      "title": "Monthly Recurring Total",
+      "footer": "recurring expenses"
+    },
+    "upcoming": {
+      "title": "Upcoming (30 days)",
+      "none": "None",
+      "noUpcoming": "No recurring transactions in the next 30 days."
+    },
+    "table": {
+      "title": "Recurring Transactions",
+      "headers": {
+        "name": "Name",
+        "category": "Category",
+        "frequency": "Frequency",
+        "nextDate": "Next Date",
+        "amount": "Amount",
+        "status": "Status"
+      },
+      "empty": "No recurring transactions yet.",
+      "monthly": "Monthly",
+      "weekly": "Weekly",
+      "yearly": "Yearly",
+      "active": "Active",
+      "inactive": "Inactive",
+      "daysAway": "{{days}} days away"
+    },
+    "toast": {
+      "comingSoon": "Recurring transaction creation coming soon."
+    }
+  },
+  "accounts": {
+    "pageTitle": "Accounts",
+    "pageDesc": "Manage all your accounts and wallets",
+    "addAccount": "Add Account",
+    "addAccountAria": "Add account",
+    "addFirstAccountAria": "Add first account",
+    "summary": {
+      "totalBalance": "Total Balance",
+      "allAccounts": "all accounts",
+      "accountCount": "Number of Accounts",
+      "linked": "linked"
+    },
+    "empty": {
+      "text": "No accounts yet. Add an account to start tracking your balance."
+    },
+    "card": {
+      "typeChecking": "Payment",
+      "typeSavings": "Savings",
+      "typeCredit": "Credit Card",
+      "edit": "Edit",
+      "delete": "Delete",
+      "accountOptions": "Account Options"
+    },
+    "balanceChart": {
+      "title": "Balance Allocation",
+      "subtitle": "Ratio between accounts",
+      "totalSuffix": "TOTAL BALANCE"
+    },
+    "toast": {
+      "accountSoon": "Add account feature coming soon.",
+      "editAccount": "Edit account {{id}} — coming soon.",
+      "deleteAccount": "Delete account {{id}} — coming soon."
+    }
+  },
+  "settings": {
+    "pageTitle": "Settings",
+    "pageDesc": "Manage your account and app preferences",
+    "tabs": {
+      "profile": "Profile",
+      "financial": "Financial",
+      "notifications": "Notifications",
+      "appearance": "Appearance",
+      "security": "Security"
+    },
+    "sections": {
+      "avatar": "Profile Photo",
+      "personal": "Personal Information",
+      "currency": "Currency & Format",
+      "budget": "Budget Period",
+      "categories": "Categories",
+      "alerts": "Alerts",
+      "reports": "Reports",
+      "theme": "Theme",
+      "effects": "Effects",
+      "password": "Password",
+      "advanced": "Advanced Security",
+      "sessions": "Login Sessions",
+      "danger": "Danger Zone"
+    },
+    "profile": {
+      "changePhoto": "Change Photo",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "phone": "Phone Number",
+      "timezone": "Timezone",
+      "firstNamePlaceholder": "First Name",
+      "lastNamePlaceholder": "Last Name",
+      "emailReadonly": "readonly data-dirty=\"profile\"",
+      "phonePlaceholder": "+84 xxx xxx xxx"
+    },
+    "financial": {
+      "currency": "Currency",
+      "currencyDesc": "Applies to all balances and reports",
+      "numberFormat": "Number Format",
+      "numberFormatDesc": "How large numbers are displayed",
+      "budgetStart": "Budget Start Day",
+      "budgetStartDesc": "Day of the month when budget period starts",
+      "addCategory": "Add Category",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "notifications": {
+      "budgetWarning": "Budget Warning",
+      "budgetWarningDesc": "Notify when spending exceeds 80% of any category limit",
+      "recurringBills": "Recurring Bills Reminder",
+      "recurringBillsDesc": "Remind 3 days before recurring bills are due",
+      "largeTx": "Large Transaction Alert",
+      "largeTxDesc": "Alert when a transaction exceeds 500,000₫",
+      "monthlyReport": "Monthly Report",
+      "monthlyReportDesc": "Receive a financial summary at the beginning of each month",
+      "weeklySummary": "Weekly Summary",
+      "weeklySummaryDesc": "Brief summary every Sunday",
+      "aiInsights": "AI Suggestions",
+      "aiInsightsDesc": "Personalized financial tips and anomaly detection"
+    },
+    "appearance": {
+      "dark": "🌙 Dark",
+      "light": "☀️ Light",
+      "system": "💻 System",
+      "themeDesc": "Choose light, dark, or system theme",
+      "accent": "Accent Color",
+      "accentDesc": "Primary color used across the interface",
+      "animations": "Animations",
+      "animationsDesc": "Enable smooth transitions and animations",
+      "compact": "Compact Mode",
+      "compactDesc": "Reduce spacing to display more information"
+    },
+    "security": {
+      "changePassword": "Change Password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "currentPlaceholder": "••••••••",
+      "newPlaceholder": "Minimum 8 characters",
+      "confirmPlaceholder": "Re-enter new password",
+      "twoFactor": "Two-Factor Authentication (2FA)",
+      "twoFactorDesc": "Require verification code each login",
+      "sessions": {
+        "current": "Current",
+        "ago1": "2 hours ago",
+        "revoke": "Revoke",
+        "revokeAll": "Revoke all other sessions"
+      },
+      "deleteAccount": "Delete Account",
+      "deleteAccountDesc": "Permanently delete account and all data. Cannot be undone.",
+      "dangerZone": "Danger Zone"
+    },
+    "device": {
+      "chromeWin": "Chrome on Windows",
+      "safariIphone": "Safari on iPhone",
+      "locationHanoi": "Hanoi, VN",
+      "locationHcm": "Ho Chi Minh City, VN",
+      "now": "Now"
+    },
+    "unsaved": "You have unsaved changes",
+    "discard": "Cancel",
+    "saveChanges": "Save Changes",
+    "saved": "Settings saved!",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "toasts": {
+      "photoSoon": "Photo upload feature coming soon.",
+      "addCatSoon": "Add category feature coming soon.",
+      "editCat": "Edit category \"{{id}}\" — coming soon.",
+      "deleteCat": "Deleted category \"{{id}}\".",
+      "deleteCatConfirm": "Delete category \"{{id}}\"? Current transactions will not be affected.",
+      "sessionRevoked": "Session revoked.",
+      "allSessionsRevoked": "All other sessions revoked.",
+      "accountDeleted": "Account deleted. Data has been reset.",
+      "passwordUpdated": "Password updated!",
+      "passwordRequired": "Please enter a new password.",
+      "passwordMismatch": "Password confirmation does not match.",
+      "themeChanged": "Theme {{theme}} enabled",
+      "accentChanged": "Accent color changed"
+    }
+  },
+  "charts": {
+    "bar": {
+      "legendIncome": "Income",
+      "legendExpense": "Expense",
+      "ariaLegend": "Chart Legend",
+      "loading": "Loading cash flow chart",
+      "empty": {
+        "title": "No Cash Flow Data",
+        "sub": "Add income or expense transactions to see cash flow analysis"
+      },
+      "tooltipIncome": "Income:",
+      "tooltipExpense": "Expense:",
+      "tooltipNet": "Net Cash Flow:",
+      "noDataChart": "No Chart Data"
+    },
+    "donut": {
+      "empty": "No spending this month",
+      "totalSub": "TOTAL EXPENSE",
+      "ariaChart": "Donut chart of spending by category",
+      "ariaLegend": "Category Index",
+      "noData": "No Data"
+    },
+    "area": {
+      "title": "Spending Chart",
+      "description": "Chart showing income and expenses over time"
+    },
+    "netWorth": {
+      "tooltipLabel": "{{label}}: {{amount}}"
+    }
+  },
+  "toast": {
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Info",
+    "error": "Error"
+  },
+  "insights": {
+    "nearLimit": "used {{pct}}% of budget",
+    "remaining": "Only {{amount}} left for {{category}} this month. Cut spending to avoid exceeding the budget.",
+    "saving": "You are saving {{rate}}% of income",
+    "savingDetail": "Saved {{net}} from income {{income}} this month.",
+    "overspent": "Expenses ({{expenses}}) exceeded income ({{income}})",
+    "overspentDetail": "You are spending more than you earn. Consider cutting unnecessary expenses.",
+    "noTransactions": "Track your first transaction to see analysis",
+    "noTransactionsDetail": "Add income or expenses to get started.",
+    "actionReports": "View Expense Report",
+    "actionReports2": "View Report",
+    "actionBudgets": "View {{category}} Budget",
+    "budgetProgress": "used {{pct}}% of budget",
+    "budgetRemaining": "Only {{amount}} left for {{category}} this month. Cut spending to avoid exceeding the budget."
+  },
+  "common": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "monthShort": "Month {{monthNum}}, {{year}}",
+    "currency": "VND",
+    "others": "Other"
+  }
+}

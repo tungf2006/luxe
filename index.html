@@ -1,109 +1,229 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Luxe – Nền tảng quản lý tài chính cá nhân. Theo dõi chi tiêu, quản lý ngân sách và rèn luyện thói quen tài chính tốt với những hiểu biết đẹp mắt." />
-  <meta name="theme-color" content="#080C15" />
-  <title>Luxe – Tài chính được quản lý đẹp mắt</title>
+  <meta name="description"
+    content="Luxe – Nền tảng quản lý tài chính cá nhân. Theo dõi chi tiêu, quản lý ngân sách và rèn luyện thói quen tài chính tốt với những hiểu biết đẹp mắt." />
+  <meta name="theme-color" content="#0B0B0D" />
+  <title>Luxe</title>
 
   <!-- Preconnect Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&subset=vietnamese&display=swap"
+    rel="stylesheet" />
 
   <!-- Stylesheet -->
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="css/logo/luxe-lx-logo.svg" type="image/svg+xml" sizes="any" />
+
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase-min.js"></script>
+
+  <!-- Environment Configuration -->
+  <!-- Replace these with your Supabase project credentials.
+       See .env.example for instructions.
+       Set url and anonKey to null to use mock mode. -->
+  <script>
+    window.SUPABASE_CONFIG = {
+      url: "https://uroencgkyifmtxmvwqew.supabase.co",
+      anonKey: "sb_publishable_6bIP_sv9jKePjvUVI9oTQg_WsVmyQO6",
+      mockMode: true,
+    };
+  </script>
 </head>
+
 <body>
-  <!-- ===== SITE HEADER ===== -->
-  <header class="site-header" role="banner">
-    <div class="container">
-      <nav class="nav-wrapper" aria-label="Main navigation">
-        <!-- Brand -->
-        <a href="#" class="brand-logo" id="logo-btn" data-page="dashboard" aria-label="Luxe Home">
-          <div class="brand-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-              <polyline points="17 6 23 6 23 12"></polyline>
-            </svg>
-          </div>
-           <span>Luxe</span>
-           <span class="brand-badge">PRO</span>
-        </a>
-
-        <!-- Desktop Navigation -->
-        <div class="main-nav" id="main-nav" role="navigation">
-          <a class="nav-link" id="nav-dashboard" data-page="dashboard" href="#" role="menuitem">
-            <span class="nav-dot" aria-hidden="true"></span>
-            Bảng điều khiển
-          </a>
-          <a class="nav-link" id="nav-transactions" data-page="transactions" href="#" role="menuitem">
-            <span class="nav-dot" aria-hidden="true"></span>
-            Giao dịch
-          </a>
-          <a class="nav-link" id="nav-budgets" data-page="budgets" href="#" role="menuitem">
-            <span class="nav-dot" aria-hidden="true"></span>
-            Ngân sách
-          </a>
-          <a class="nav-link" id="nav-reports" data-page="reports" href="#" role="menuitem">
-            <span class="nav-dot" aria-hidden="true"></span>
-            Báo cáo
-          </a>
-          <a class="nav-link" id="nav-settings" data-page="settings" href="#" role="menuitem">
-            <span class="nav-dot" aria-hidden="true"></span>
-            Cài đặt
-          </a>
-        </div>
-
-        <!-- Header Actions -->
-        <div class="header-actions">
-          <button class="btn-add-transaction" id="open-add-tx-modal" data-open-modal="add-tx-modal" aria-label="Thêm giao dịch mới">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Thêm giao dịch
-          </button>
-
-          <!-- Notification -->
-          <button class="user-avatar-btn" id="notif-btn" style="width:40px;height:40px;position:relative;" aria-label="Thông báo">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-secondary)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-            <span class="avatar-online" aria-hidden="true"></span>
-          </button>
-
-          <!-- Avatar -->
-          <button class="user-avatar-btn" id="avatar-btn" aria-label="Tài khoản người dùng">
-            <div style="width:100%;height:100%;background:linear-gradient(135deg,#6366F1,#38BDF8);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:0.875rem;color:white;">
-              AK
-            </div>
-          </button>
-
-          <!-- Mobile Toggle -->
-          <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Chuyển đổi thanh điều hướng" aria-expanded="false">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-          </button>
-        </div>
-      </nav>
-    </div>
-  </header>
-
-  <!-- ===== MAIN CONTENT ===== -->
-  <main class="main-content" id="main-content" role="main">
-    <div class="container">
-      <!-- All page content is rendered here by feature modules -->
-      <div id="page-container"></div>
-    </div>
-  </main>
-
-  <!-- ===== MODAL OVERLAY (content generated by transactionForm.js) ===== -->
-  <div class="modal-overlay" id="add-tx-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
-    <div class="modal-dialog">
-      <!-- Form generated by src/features/transactions/transactionForm.js -->
-    </div>
+  <!-- ===== AUTH CONTAINER (for fullscreen auth/onboarding pages) ===== -->
+  <div id="auth-container" aria-hidden="true">
+    <div id="auth-content"></div>
   </div>
 
-  <!-- ===== TOAST CONTAINER ===== -->
-  <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
+  <!-- ===== APP LAYOUT (hidden on auth/onboarding/loading pages) ===== -->
+  <div class="app-layout" style="display: none;" aria-hidden="true">
+    <!-- ===== LEFT SIDEBAR ===== -->
+    <aside class="sidebar" id="sidebar" role="navigation" data-i18n-aria="app.aria.mainNav">
+      <div class="sidebar-header">
+        <a href="#" class="brand-logo" id="logo-btn" data-page="dashboard" aria-label="Luxe Trang chủ">
+          <div class="brand-icon" aria-hidden="true">
+            <img src="css/logo/luxe-lx-logo.svg" alt="Luxe" width="20" height="20" />
+          </div>
+          <span>Luxe</span>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav" id="main-nav">
+        <ul class="sidebar-nav-list" id="sidebar-nav-list">
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn-quick-add" id="open-add-tx-modal" data-open-modal="add-tx-modal"
+          data-i18n="app.aria.addTransaction">
+          <span class="nav-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg></span>
+          <span data-i18n="app.addTransaction">Thêm giao dịch</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ===== MAIN WRAPPER (topbar + content) ===== -->
+    <div class="main-wrapper">
+
+      <!-- ===== TOPBAR ===== -->
+      <header class="site-header" id="site-header" role="banner">
+        <div class="header-left">
+          <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Mở điều hướng"
+            data-i18n-aria="app.aria.openNav" aria-expanded="false">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <nav id="breadcrumb" class="breadcrumb" aria-label="Breadcrumb">
+            <ol class="breadcrumb-list">
+              <li class="breadcrumb-item"><a href="#" class="breadcrumb-link" data-page="dashboard" id="breadcrumb-home"
+                  aria-label="Trang chủ">Luxe</a></li>
+              <li class="breadcrumb-separator" aria-hidden="true"></li>
+              <li class="breadcrumb-current" id="breadcrumb-current" aria-current="page">Tổng quan</li>
+            </ol>
+          </nav>
+          <h1 class="page-title-header" id="page-title-header" data-i18n="nav.dashboard">Tổng quan</h1>
+        </div>
+
+        <div class="header-actions">
+          <!-- Global search -->
+          <div class="topbar-search" role="search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input type="search" id="topbar-search-input" placeholder="Tìm kiếm..." aria-label="Tìm kiếm toàn cục"
+              data-i18n-placeholder="app.topbarSearch" data-i18n-aria="app.topbarSearchAria" />
+          </div>
+
+          <!-- Bell notification -->
+          <button class="topbar-bell" id="notif-btn" aria-label="Thông báo" data-i18n-aria="app.notifications">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span class="topbar-bell-badge" id="notif-badge" aria-label="3 thông báo chưa đọc">3</span>
+          </button>
+
+          <!-- Avatar + name + dropdown -->
+          <div class="user-menu" id="user-menu">
+            <button class="user-menu-btn" id="avatar-btn" aria-label="Tài khoản người dùng"
+              data-i18n-aria="app.aria.userAccount" aria-haspopup="true" aria-expanded="false">
+              <div class="user-avatar-btn" style="width:30px;height:30px;flex-shrink:0;">
+                <img id="user-avatar" src="" alt="Ảnh đại diện"
+                  style="display:none;width:100%;height:100%;border-radius:50%;object-fit:cover;" />
+                <div id="user-avatar-fallback"
+                  style="width:100%;height:100%;background:linear-gradient(135deg,#22C55E,#16A34A);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:0.75rem;color:white;">
+                </div>
+              </div>
+              <span id="user-name" class="user-display-name">Luxe User</span>
+              <svg class="user-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+
+            <div class="user-menu-dropdown" id="user-menu-dropdown" role="menu" aria-hidden="true">
+              <button class="user-menu-dropdown-item" role="menuitem" data-page="settings">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <span data-i18n="app.userMenu.profile">Hồ sơ</span>
+              </button>
+              <button class="user-menu-dropdown-item" role="menuitem" data-page="settings">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
+                </svg>
+                <span data-i18n="app.userMenu.settings">Cài đặt</span>
+              </button>
+              <div class="user-menu-dropdown-divider" role="separator"></div>
+              <button class="user-menu-dropdown-item danger" id="logout-btn" role="menuitem">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span data-i18n="app.userMenu.logout">Đăng xuất</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ===== MAIN CONTENT ===== -->
+      <main class="main-content" id="main-content" role="main">
+        <!-- All page content is rendered here by feature modules -->
+        <div id="page-container"></div>
+      </main>
+
+    </div>
+    <!-- / .main-wrapper -->
+
+    <!-- ===== MODAL OVERLAY ===== -->
+    <div class="modal-overlay" id="add-tx-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"
+      aria-hidden="true" tabindex="-1">
+      <div class="modal-dialog">
+      </div>
+    </div>
+
+    <!-- ===== TOAST CONTAINER ===== -->
+    <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- ===== MOBILE FLOATING ACTION BUTTON (FAB) ===== -->
+    <button class="mobile-fab-btn" id="mobile-fab-btn" data-open-modal="add-tx-modal" aria-label="Thêm giao dịch" data-i18n-aria="app.aria.addTransaction">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+
+    <!-- ===== MOBILE BOTTOM NAVIGATION ===== -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav" role="navigation" aria-label="Điều hướng dưới cùng"
+      data-i18n-aria="app.aria.bottomNav">
+      <ul class="mobile-nav-list" id="mobile-nav-list">
+      </ul>
+    </nav>
+
+    <!-- ===== MOBILE MORE SHEET ===== -->
+    <div class="mobile-more-sheet" id="mobile-more-sheet" role="menu" aria-hidden="true" aria-label="Menu thêm"
+      data-i18n-aria="app.aria.mobileMore">
+      <div class="mobile-more-sheet-backdrop" id="mobile-more-backdrop"></div>
+      <div class="mobile-more-sheet-content">
+        <div class="mobile-more-handle" aria-hidden="true"></div>
+        <ul class="mobile-more-list" id="mobile-more-list">
+        </ul>
+      </div>
+    </div>
+  </div>
+  <!-- / APP LAYOUT -->
 
   <!-- ===== APP SCRIPT (ES Module) ===== -->
   <script type="module" src="src/app.js"></script>
 </body>
+
 </html>

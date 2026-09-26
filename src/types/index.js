@@ -12,7 +12,8 @@
  * @property {'income'|'expense'} type
  * @property {string} date        ISO date YYYY-MM-DD
  * @property {number} amount
- * @property {'completed'|'pending'} status
+ * @property {'completed'|'pending'|'failed'|'cancelled'} status
+ * @property {'cash'|'card'|'transfer'|'ewallet'} [payment_method]
  */
 
 /**

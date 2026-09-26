@@ -8,6 +8,9 @@ export const STORAGE_KEYS = {
   TRANSACTIONS: 'luxe_transactions',
   BUDGETS:     'luxe_budgets',
   SETTINGS:    'luxe_settings',
+  ACCOUNTS:    'luxe_accounts',
+  GOALS:       'luxe_goals',
+  RECURRING:   'luxe_recurring',
 };
 
 /**

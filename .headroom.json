@@ -1,0 +1,12 @@
+{
+  "name": "headroom",
+  "proxy": {
+    "url": "http://127.0.0.1:8787",
+    "output_shaper": true
+  },
+  "memory": {
+    "enabled": true,
+    "scope": "project"
+  },
+  "savings_profile": "coding"
+}

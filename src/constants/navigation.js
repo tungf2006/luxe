@@ -1,18 +1,40 @@
 /**
- * @file Navigation configuration for Luxe dashboard.
- * Defines all primary navigation items shown in the header.
+ * @file Navigation configuration — re-exports the single source of truth
+ * from src/config/routes.js so existing import paths keep working.
+ *
  * @typedef {Object} NavItem
  * @property {string} id        DOM id for the nav link (kept stable for tests)
- * @property {string} page      Route/page identifier
- * @property {string} label     Display label
- * @property {string} icon      SVG icon name (resolved in render)
+ * @property {string} page      Route/page identifier (alias of `path`)
+ * @property {string} label     Display label (sidebar nav)
+ * @property {string} title     Page-header / document.title label
+ * @property {string} description  Page-header subtitle
+ * @property {string} icon      Inline SVG path data
  */
-export const NAVIGATION_ITEMS = [
-  { id: 'nav-dashboard',    page: 'dashboard',    label: 'Bảng điều khiển',  icon: 'dashboard' },
-  { id: 'nav-transactions', page: 'transactions', label: 'Giao dịch',        icon: 'transactions' },
-  { id: 'nav-budgets',      page: 'budgets',      label: 'Ngân sách',        icon: 'budgets' },
-  { id: 'nav-reports',      page: 'reports',      label: 'Báo cáo',          icon: 'reports' },
-  { id: 'nav-settings',     page: 'settings',     label: 'Cài đặt',          icon: 'settings' },
-];
 
-export const DEFAULT_PAGE = 'dashboard';
+import { ROUTES, DEFAULT_PAGE, getRoute, getPageDocumentTitle } from '../config/routes.js';
+
+/**
+ * Build the legacy NAVIGATION_ITEMS array from the canonical route config,
+ * adding the `id` field used by the HTML / tests.
+ */
+export const NAVIGATION_ITEMS = ROUTES.map(route => ({
+  id: `nav-${route.path}`,
+  page: route.path,
+  label: route.label,
+  title: route.title,
+  description: route.description,
+  icon: route.icon,
+}));
+
+export { DEFAULT_PAGE, ROUTES, getRoute, getPageDocumentTitle };
+
+/**
+ * Find nav item by page name.
+ * @param {string} page
+ * @returns {{id:string,page:string,label:string,title:string,description:string,icon:string}|null}
+ */
+export function getNavItem(page) {
+  const route = getRoute(page);
+  if (!route) return null;
+  return { id: `nav-${route.path}`, page: route.path, ...route };
+}

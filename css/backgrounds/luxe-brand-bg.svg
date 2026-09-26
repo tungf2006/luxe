@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="lx-emerald-core" cx="50%" cy="40%" r="35%" fx="50%" fy="40%">
+      <stop offset="0%" stop-color="#22C55E" stop-opacity="0.18"/>
+      <stop offset="45%" stop-color="#22C55E" stop-opacity="0.08"/>
+      <stop offset="75%" stop-color="#16A34A" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#16A34A" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="lx-emerald-left" cx="20%" cy="30%" r="30%" fx="20%" fy="30%">
+      <stop offset="0%" stop-color="#86EFAC" stop-opacity="0.1"/>
+      <stop offset="50%" stop-color="#22C55E" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#22C55E" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="lx-emerald-right" cx="80%" cy="25%" r="25%" fx="80%" fy="25%">
+      <stop offset="0%" stop-color="#D1FAE5" stop-opacity="0.09"/>
+      <stop offset="50%" stop-color="#22C55E" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#22C55E" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="lx-x-line-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22C55E" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#22C55E" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#16A34A" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="lx-x-line-grad-2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#38BDF8" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#22C55E" stop-opacity="0"/>
+    </linearGradient>
+
+    <filter id="lx-soft-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="#0B0B0D"/>
+
+  <rect width="1600" height="900" fill="url(#lx-emerald-core)" opacity="0.7"/>
+  <rect width="1600" height="900" fill="url(#lx-emerald-left)" opacity="0.5"/>
+  <rect width="1600" height="900" fill="url(#lx-emerald-right)" opacity="0.4"/>
+
+  <path d="M320 840 L1280 160" fill="none" stroke="url(#lx-x-line-grad)" stroke-width="1.5" opacity="0.4" stroke-linecap="round" filter="url(#lx-soft-glow)"/>
+  <path d="M1280 840 L320 160" fill="none" stroke="url(#lx-x-line-grad-2)" stroke-width="1.5" opacity="0.35" stroke-linecap="round" filter="url(#lx-soft-glow)"/>
+
+  <path d="M480 760 L1120 240" fill="none" stroke="#22C55E" stroke-width="0.5" stroke-opacity="0.04" stroke-dasharray="8 8"/>
+  <path d="M480 240 L1120 760" fill="none" stroke="#38BDF8" stroke-width="0.5" stroke-opacity="0.03" stroke-dasharray="10 6"/>
+
+  <g opacity="0.05" transform="translate(760 480)">
+    <path d="M-60 -110 L60 110" stroke="#22C55E" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M60 -110 L-60 110" stroke="#22C55E" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M0 130 L0 -130" stroke="#22C55E" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <circle cx="320" cy="380" r="80" fill="url(#lx-emerald-left)" opacity="0.3" filter="url(#lx-soft-glow)"/>
+  <circle cx="1280" cy="340" r="60" fill="url(#lx-emerald-right)" opacity="0.25" filter="url(#lx-soft-glow)"/>
+  <circle cx="800" cy="520" r="25" fill="#22C55E" opacity="0.18" filter="url(#lx-soft-glow)"/>
+
+  <circle cx="420" cy="440" r="3" fill="#22C55E" opacity="0.45"/>
+  <circle cx="445" cy="470" r="2" fill="#22C55E" opacity="0.38"/>
+  <circle cx="475" cy="500" r="3" fill="#22C55E" opacity="0.32"/>
+  <circle cx="505" cy="535" r="2" fill="#22C55E" opacity="0.38"/>
+  <circle cx="535" cy="565" r="3" fill="#22C55E" opacity="0.3"/>
+
+  <circle cx="1320" cy="300" r="2" fill="#86EFAC" opacity="0.35"/>
+  <circle cx="1345" cy="330" r="2" fill="#86EFAC" opacity="0.28"/>
+  <circle cx="1370" cy="360" r="3" fill="#86EFAC" opacity="0.32"/>
+  <circle cx="1395" cy="390" r="2" fill="#86EFAC" opacity="0.25"/>
+
+  <rect x="280" y="640" width="4" height="24" fill="#22C55E" opacity="0.15" rx="2"/>
+  <rect x="292" y="630" width="4" height="34" fill="#22C55E" opacity="0.18" rx="2"/>
+  <rect x="304" y="620" width="4" height="44" fill="#22C55E" opacity="0.22" rx="2"/>
+  <rect x="316" y="630" width="4" height="34" fill="#22C55E" opacity="0.18" rx="2"/>
+  <rect x="328" y="638" width="4" height="26" fill="#22C55E" opacity="0.16" rx="2"/>
+  <rect x="340" y="625" width="4" height="39" fill="#22C55E" opacity="0.14" rx="2"/>
+  <rect x="352" y="640" width="4" height="24" fill="#22C55E" opacity="0.13" rx="2"/>
+
+  <rect x="700" y="650" width="4" height="20" fill="#38BDF8" opacity="0.1"/>
+  <rect x="710" y="645" width="4" height="25" fill="#38BDF8" opacity="0.12" rx="2"/>
+  <rect x="720" y="640" width="4" height="30" fill="#38BDF8" opacity="0.1" rx="2"/>
+  <rect x="730" y="635" width="4" height="35" fill="#38BDF8" opacity="0.08" rx="2"/>
+</svg>

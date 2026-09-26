@@ -54,8 +54,10 @@ export function AreaChart({
   height = DEFAULT_HEIGHT,
   incomeColor = '#6366F1',
   expenseColor = '#38BDF8',
+  title = 'Biểu đồ chi tiêu',
+  description = 'Biểu đồ hiển thị thu nhập và chi phí qua thời gian',
 }) {
-  if (!data || data.length === 0) return '<div class="chart-empty">Không có dữ liệu</div>';
+  if (!data || data.length === 0) return '<div class="chart-empty" role="img" aria-label="Không có dữ liệu biểu đồ">Không có dữ liệu</div>';
 
   const innerW = width - PADDING.left - PADDING.right;
   const innerH = height - PADDING.top - PADDING.bottom;
@@ -92,7 +94,9 @@ export function AreaChart({
   ).join('');
 
   return `
-    <svg class="chart-svg" viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="none" aria-label="Biểu đồ chi tiêu">
+    <svg class="chart-svg" viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="none" role="img" aria-label="${title}" aria-describedby="${title}-desc">
+      <title>${title}</title>
+      <desc id="${title}-desc">${description}</desc>
       <defs>
         <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${incomeColor}" stop-opacity="0.4"/>
