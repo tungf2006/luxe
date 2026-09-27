@@ -1,0 +1,733 @@
+/* ==========================================================================
+   Luxe — Authentication & Onboarding Styles
+   ========================================================================== */
+
+/* Auth page layout */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-charcoal, #0B0B0D);
+  background-image: 
+    radial-gradient(circle at 20% 20%, var(--emerald-glow-strong, rgba(34, 197, 94, 0.15)) 0%, transparent 40%),
+    radial-gradient(circle at 80% 25%, rgba(99, 102, 241, 0.08) 0%, transparent 35%),
+    radial-gradient(circle at 50% 70%, var(--emerald-glow, rgba(34, 197, 94, 0.08)) 0%, transparent 50%);
+  background-attachment: fixed;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-page::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      165deg,
+      rgba(34, 197, 94, 0.05) 0px,
+      rgba(34, 197, 94, 0.05) 1px,
+      transparent 1px,
+      transparent 8px
+    ),
+    repeating-linear-gradient(
+      25deg,
+      rgba(99, 102, 241, 0.03) 0px,
+      rgba(99, 102, 241, 0.03) 1px,
+      transparent 1px,
+      transparent 12px
+    );
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auth-background {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auth-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.3;
+  animation: auth-pulse 8s ease-in-out infinite;
+}
+
+.auth-glow--1 {
+  width: 360px;
+  height: 360px;
+  top: -80px;
+  left: -100px;
+  background: radial-gradient(circle, var(--emerald-accent, #22C55E) 0%, transparent 60%);
+  animation-delay: 0s;
+}
+
+.auth-glow--2 {
+  width: 280px;
+  height: 280px;
+  bottom: -60px;
+  right: -80px;
+  background: radial-gradient(circle, #6366F1 0%, transparent 60%);
+  animation-delay: 2s;
+}
+
+.auth-glow--3 {
+  width: 180px;
+  height: 180px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, var(--emerald-accent-light, #86EFAC) 0%, transparent 60%);
+  animation-delay: 4s;
+}
+
+@keyframes auth-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.05); }
+}
+
+.auth-grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Auth card */
+.auth-container {
+  width: 100%;
+  max-width: 400px;
+  padding: 1.5rem;
+  position: relative;
+  z-index: 10;
+}
+
+.auth-card {
+  background: linear-gradient(135deg, var(--bg-glass-card, rgba(18, 28, 51, 0.65)) 0%, rgba(18, 28, 51, 0.85) 100%);
+  border: 1px solid var(--border-card, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-xl, 16px);
+  padding: 2.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.brand-logo-auth {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  text-decoration: none;
+  color: var(--text-primary);
+  font-family: var(--font-display, 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+.brand-icon-auth {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--emerald-accent, #22C55E), #16A34A);
+  border-radius: var(--radius-sm, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.1rem;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
+}
+
+.brand-text-auth {
+  letter-spacing: -0.02em;
+}
+
+.auth-title {
+  font-family: var(--font-display, 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.auth-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Mock mode notice */
+.auth-mock-notice {
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: var(--emerald-accent, #22C55E);
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 0.8rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+/* Form elements */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.form-input {
+  background: var(--bg-surface-elevated, #151F36);
+  border: 1px solid var(--border-card, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 12px);
+  padding: 0.8rem 1rem;
+  color: var(--text-primary);
+  font-family: var(--font-body, 'Inter', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 0.925rem;
+  outline: none;
+  transition: all 150ms ease;
+}
+
+.form-input:focus {
+  border-color: var(--emerald-accent, #22C55E);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+.form-error {
+  font-size: 0.775rem;
+  color: #F43F5E;
+  margin-top: 0.2rem;
+  display: none;
+}
+
+.form-success {
+  font-size: 0.875rem;
+  color: var(--emerald-accent, #22C55E);
+  padding: 0.6rem 0.85rem;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: var(--radius-sm, 8px);
+  display: none;
+}
+
+.form-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 0.15rem;
+  cursor: pointer;
+  accent-color: var(--emerald-accent, #22C55E);
+}
+
+.checkbox-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.auth-link {
+  color: var(--emerald-accent, #22C55E);
+  text-decoration: none;
+  font-weight: 500;
+  text-align: right;
+  display: block;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  transition: transform var(--transition-fast), text-decoration var(--transition-fast);
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.auth-link:active {
+  transform: scale(0.98);
+}
+
+.auth-link-small {
+  color: var(--emerald-accent-light, #86EFAC);
+  text-decoration: none;
+  cursor: pointer;
+  transition: text-decoration var(--transition-fast);
+}
+
+.auth-link-small:hover {
+  text-decoration: underline;
+}
+
+.auth-link-small:active {
+  transform: scale(0.98);
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.auth-footer .auth-link {
+  display: inline;
+  text-align: center;
+  margin-top: 0;
+  margin-left: 0.3rem;
+}
+
+/* Submit button */
+.btn-auth-submit {
+  background: linear-gradient(135deg, var(--emerald-accent, #22C55E), #16A34A);
+  color: #0B0B0D;
+  border: none;
+  border-radius: var(--radius-md, 12px);
+  padding: 0.8rem 1.5rem;
+  font-family: var(--font-display, 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+  position: relative;
+  height: 48px;
+}
+
+.btn-auth-submit:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.4);
+}
+
+.btn-auth-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-loading {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-text {
+  display: inline-block;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-card, rgba(255, 255, 255, 0.1));
+  color: var(--text-secondary);
+  padding: 0.7rem 1.25rem;
+  border-radius: var(--radius-md, 12px);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Google button */
+.btn-google {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-card, rgba(255, 255, 255, 0.15));
+  color: var(--text-primary);
+  border-radius: var(--radius-md, 12px);
+  padding: 0.7rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 150ms ease;
+}
+
+.btn-google:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.google-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: #4285F4;
+  color: white;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+/* Divider */
+.auth-divider {
+  text-align: center;
+  position: relative;
+  margin: 1.5rem 0;
+  color: var(--text-muted);
+  font-size: 0.825rem;
+}
+
+.auth-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-subtle, rgba(255, 255, 255, 0.07));
+}
+
+.auth-divider span {
+  background: var(--bg-glass-card, rgba(18, 28, 51, 0.65));
+  padding: 0 0.75rem;
+  position: relative;
+}
+
+/* Password toggle */
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  font-size: 0.9rem;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(11, 11, 13, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner--large {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Auth loading */
+.auth-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  min-height: 400px;
+}
+
+.auth-loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--emerald-accent, #22C55E), #16A34A);
+  box-shadow: 0 0 40px rgba(34, 197, 94, 0.3);
+}
+
+.auth-loading-text {
+  font-family: var(--font-display, 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.03em;
+}
+
+/* Verify email */
+.verify-email-content {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.verify-email-icon {
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.7;
+}
+
+.verify-email-text {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+/* ==========================================================================
+   Onboarding Styles
+   ========================================================================== */
+.onboarding-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-charcoal, #0B0B0D);
+  padding: 1.5rem;
+}
+
+.onboarding-container {
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  z-index: 10;
+}
+
+.onboarding-progress {
+  margin-bottom: 1.5rem;
+}
+
+.onboarding-progress-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.onboarding-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--emerald-accent, #22C55E), #16A34A);
+  border-radius: 2px;
+  transition: width 300ms ease;
+}
+
+.onboarding-progress-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+}
+
+.onboarding-card {
+  background: linear-gradient(135deg, var(--bg-glass-card, rgba(18, 28, 51, 0.65)) 0%, rgba(18, 28, 51, 0.85) 100%);
+  border: 1px solid var(--border-card, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-xl, 16px);
+  padding: 2.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+}
+
+.onboarding-steps-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 200ms ease;
+}
+
+.step-dot.active {
+  background: var(--emerald-accent, #22C55E);
+  color: #0B0B0D;
+  transform: scale(1.15);
+}
+
+.step-dot.complete {
+  background: var(--emerald-accent, #22C55E);
+  color: white;
+}
+
+.step-dot:not(.active):not(.complete) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.07));
+}
+
+.onboarding-step-title {
+  font-family: var(--font-display, 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.onboarding-step-desc {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.onboarding-skip-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.onboarding-skip-wrapper {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.goal-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.goal-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border: 1.5px solid var(--border-subtle, rgba(255, 255, 255, 0.07));
+  border-radius: var(--radius-md, 12px);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.goal-option:hover {
+  border-color: var(--emerald-accent, #22C55E);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.goal-option.has-selection {
+  display: none;
+}
+
+.goal-option-icon {
+  font-size: 1.1rem;
+}
+
+.goal-option-label {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.goal-option.selected {
+  border-color: var(--emerald-accent, #22C55E);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.select-dropdown {
+  background: var(--bg-surface-elevated, #151F36);
+  border: 1px solid var(--border-card, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 12px);
+  padding: 0.7rem 1rem;
+  color: var(--text-primary);
+  font-family: var(--font-body, 'Inter', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.select-dropdown:focus {
+  border-color: var(--emerald-accent, #22C55E);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+/* Password strength meter */
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.password-strength-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.password-strength-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 2px;
+  transition: all 200ms ease;
+}
+
+.password-strength-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  min-width: 4.5rem;
+  text-align: right;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+@media (max-width: 640px) {
+  .auth-card {
+    padding: 1.75rem;
+  }
+  .onboarding-card {
+    padding: 1.75rem;
+  }
+  .onboarding-actions {
+    flex-direction: column;
+  }
+  .goal-options {
+    grid-template-columns: 1fr;
+  }
+}

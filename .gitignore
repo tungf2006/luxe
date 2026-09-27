@@ -1,0 +1,34 @@
+node_modules/
+.worktrees/
+.stitch/
+package-lock.json
+skills/
+.env
+.env.example
+*.log
+.DS_Store
+Thumbs.db
+
+# Kilo / AI tooling
+.agents/
+.kilo/
+.headroom.json
+.mcp.json
+.aider-desk/
+.impeccable/
+
+# Headroom
+headroom/
+
+# Debug tooling and screenshots
+tools/
+
+# Legacy monolithic app
+js/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

@@ -1,44 +1,15 @@
 # Luxe — Personal Finance Dashboard
 
-<p align="center">
-  <img src="css/logo/luxe-lx-logo.svg" alt="Luxe" width="80" />
-</p>
+A vanilla-JS (ES modules) personal finance dashboard with charts, routing, and persistence.
 
-<p align="center">
-  <strong>Luxe</strong> is a vanilla-JS personal finance dashboard that helps you track spending, manage budgets, and build better financial habits — all in a refined, dark-themed interface.
-</p>
-
-<p align="center">
-  <a href="#features">Features</a> ·
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#architecture">Architecture</a> ·
-  <a href="#stack">Stack</a>
-</p>
-
----
-
-## Features
-
-- 📊 **Dashboard** — KPI cards, spending charts, recent transactions, budget progress, and financial insights
-- 💸 **Transactions** — Full CRUD with inline editing, filters, search, pagination, bulk actions, and undo delete
-- 🎯 **Budgets** — Budget tracking with 3-level alert system (warning / danger / critical)
-- 📈 **Reports** — Cash flow bar chart, category breakdown donut, and net worth trend
-- ⚙️ **Settings** — Profile, currency, notifications, appearance, and security tabs with dirty-state save bar
-- 🔐 **Auth** — Login, register, forgot password, email verification with Supabase or mock mode
-- 🌍 **i18n** — Vietnamese & English translations with no global leak
-- 📱 **Responsive** — Mobile-first with bottom nav, FAB, and more-sheet
-
-## Quick Start
+## Commands
 
 ```bash
-# Install dependencies
-npm install
-
-# Start dev server (serves src/ on port 3000)
+# Start local dev server (serves src/ on port 3000)
 node server.js
 
 # Run smoke test (requires server running on :3000)
-npm run smoke
+node test-app.js
 ```
 
 ## Architecture
@@ -77,7 +48,7 @@ src/
         └── settingsView.js
 ```
 
-## Stack
+## Conventions
 
 - **No framework** — pure vanilla JS + native ES modules (`type="module"`)
 - **No build step** — import paths use `./` or `../` relative to `src/`
@@ -91,11 +62,54 @@ src/
 
 Tests use Puppeteer (the only npm dependency) against the live dev server.
 
+## Headroom Integration (Context Compression)
+
+This project is integrated with [Headroom](https://github.com/headroomlabs-ai/headroom) for context compression during development.
+
+### Setup
+
+Headroom CLI is installed as a uv tool. The proxy runs on `http://127.0.0.1:8787`.
+
+### Usage
+
+When working with AI agents (Claude Code, Copilot, etc.), route through the Headroom proxy:
 ```bash
-npm run smoke    # Run smoke test
-npm run test     # Run donut chart test
+# Claude Code
+ANTHROPIC_BASE_URL=http://127.0.0.1:8787 claude
+
+# Codex / OpenAI compatible
+OPENAI_BASE_URL=http://127.0.0.1:8787/v1 your-app
 ```
 
-## License
+### MCP Server
 
-MIT
+The `.mcp.json` file configures the Headroom MCP server for AI agents that support MCP:
+- `headroom_compress` - Compress messages before sending to an LLM
+- `headroom_retrieve` - Retrieve original (uncompressed) messages
+- `headroom_stats` - View compression statistics
+
+### Memory
+
+Cross-agent memory is enabled for persistent context across sessions. View and manage memories:
+```bash
+headroom memory list
+headroom memory stats
+```
+
+### Output Token Reduction
+
+Headroom's output shaper is enabled (`HEADROOM_OUTPUT_SHAPER=1`) to reduce verbose agent responses.
+
+### Dashboard
+
+View live savings statistics:
+```bash
+headroom dashboard  # http://127.0.0.1:8787/dashboard
+```
+
+### Learn from Failed Sessions
+
+After debugging failed development sessions, run:
+```bash
+headroom learn --verbosity --apply  # Writes corrections to CLAUDE.local.md (gitignored)
+```

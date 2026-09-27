@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "test": "node test-donut-chart.js",
+    "test:i18n": "node test-i18n-no-leak.js",
+    "smoke": "node test-app.js"
+  },
+  "allowScripts": {
+    "puppeteer": true
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "puppeteer": "^25.10.0"
+  }
+}
