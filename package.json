@@ -1,7 +1,15 @@
 {
+  "name": "luxe",
+  "version": "1.0.0",
+  "description": "Luxe — Personal Finance Dashboard (Vanilla JS ES Modules)",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
     "test": "node test-donut-chart.js",
     "test:i18n": "node test-i18n-no-leak.js",
+    "test:typography": "node test-typography.js",
     "smoke": "node test-app.js"
   },
   "allowScripts": {

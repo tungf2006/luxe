@@ -250,6 +250,9 @@ function tableHTML() {
               <th scope="col" data-sort="payment_method" aria-sort="${_sortField === 'payment_method' ? (_sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}">
                 Phương thức ${renderSortIndicator('payment_method')}
               </th>
+              <th scope="col" data-sort="status" aria-sort="${_sortField === 'status' ? (_sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}">
+                Trạng thái ${renderSortIndicator('status')}
+              </th>
               <th scope="col" style="text-align:right;" data-sort="amount" aria-sort="${_sortField === 'amount' ? (_sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}">
                 Số tiền ${renderSortIndicator('amount')}
               </th>
@@ -352,7 +355,7 @@ function renderTableBody(container) {
         const tooltip = formatDateLong(currentDate);
         rows.push(`
           <tr class="tx-date-header" data-date="${currentDate}">
-            <td colspan="7" class="tx-date-header-cell" title="${escapeHtml(tooltip)}">
+            <td colspan="8" class="tx-date-header-cell" title="${escapeHtml(tooltip)}">
               <span>${escapeHtml(headerText)}</span>
             </td>
           </tr>
@@ -369,6 +372,7 @@ function renderTableBody(container) {
           <td>${categoryTagHTML(tx.category)}</td>
           <td style="color:var(--text-secondary);font-size:0.85rem;">${tx.date}</td>
           <td>${paymentMethodHTML(tx.payment_method)}</td>
+          <td>${statusBadgeHTML(tx.status)}</td>
           <td class="table-amount ${tx.type === 'income' ? 'highlight-positive' : 'highlight-negative'}">
             ${formatAmount(tx.amount, tx.type)}
           </td>
@@ -403,7 +407,10 @@ function renderTableBody(container) {
               <span>${tx.date}</span>
             </div>
             <div class="tx-card-footer">
-              <div>${paymentMethodHTML(tx.payment_method)}</div>
+              <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                ${paymentMethodHTML(tx.payment_method)}
+                ${statusBadgeHTML(tx.status)}
+              </div>
               <div class="tx-card-amount ${amountClass}">${formatAmount(tx.amount, tx.type)}</div>
             </div>
           </div>

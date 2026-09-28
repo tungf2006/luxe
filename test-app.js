@@ -2,7 +2,7 @@
  * Smoke test — verifies the Luxe app loads and navigation works.
  * Run: node test-app.js
  */
-const puppeteer = require('puppeteer');
+import puppeteer from 'puppeteer';
 
 (async () => {
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });

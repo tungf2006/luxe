@@ -9,7 +9,7 @@
  * subset requests). The `subset=vietnamese` URL param is therefore the scoping
  * signal, and a glyph-level width check confirms the glyphs live in the font.
  */
-const puppeteer = require('puppeteer');
+import puppeteer from 'puppeteer';
 
 const URL = 'http://localhost:3000';
 const RESULTS = [];
@@ -132,10 +132,12 @@ function check(name, ok, detail) {
     ratioOk('panel-title', panel);
 
     // page-header-title lives on subpages — navigate to Budgets.
-    const navBudgets = await page.$('#nav-budgets');
-    if (navBudgets) {
-      await Promise.all([page.click('#nav-budgets'), new Promise((r) => setTimeout(r, 1200))]);
-    }
+    await page.evaluate(() => {
+      const btn = document.querySelector('#nav-budgets');
+      if (btn) btn.click();
+      else window.location.hash = '#budgets';
+    });
+    await new Promise((r) => setTimeout(r, 1200));
     const pageTitle = await readHeading('.page-header-title');
     ratioOk('page-header-title', pageTitle);
 

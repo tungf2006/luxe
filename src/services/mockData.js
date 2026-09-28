@@ -19,29 +19,36 @@
  * @property {number} spent    Amount spent this period
  */
 
+const _now = new Date();
+const dOffset = (daysAgo) => {
+  const d = new Date(_now);
+  d.setDate(d.getDate() - daysAgo);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export const DEFAULT_TRANSACTIONS = [
-  { id: 't01', merchant: 'Lương',            category: 'income',        type: 'income',  date: '2026-09-12', amount: 4200, status: 'completed', payment_method: 'transfer' },
-  { id: 't02', merchant: 'Dự án freelance',  category: 'income',        type: 'income',  date: '2026-09-11', amount: 2220, status: 'completed', payment_method: 'transfer' },
-  { id: 't03', merchant: 'Siêu thị Co.opmart', category: 'food',        type: 'expense', date: '2026-09-13', amount: 86,   status: 'completed', payment_method: 'card' },
-  { id: 't04', merchant: 'Cà phê Highlands',  category: 'food',        type: 'expense', date: '2026-09-13', amount: 12,   status: 'pending',   payment_method: 'card' },
-  { id: 't05', merchant: 'Grab',             category: 'transport',     type: 'expense', date: '2026-09-12', amount: 18,   status: 'completed', payment_method: 'ewallet' },
-  { id: 't06', merchant: 'Netflix',          category: 'entertainment', type: 'expense', date: '2026-09-10', amount: 15,   status: 'cancelled', payment_method: 'card' },
-  { id: 't07', merchant: 'Tiền điện',        category: 'bills',         type: 'expense', date: '2026-09-09', amount: 95,   status: 'completed', payment_method: 'transfer' },
-  { id: 't08', merchant: 'Shopee',           category: 'shopping',      type: 'expense', date: '2026-09-08', amount: 64,   status: 'failed',    payment_method: 'ewallet' },
-  { id: 't09', merchant: 'Phòng khám',       category: 'health',        type: 'expense', date: '2026-09-07', amount: 120,  status: 'completed', payment_method: 'card' },
-  { id: 't10', merchant: 'Chợ dầu xanh',      category: 'food',        type: 'expense', date: '2026-09-06', amount: 73,   status: 'completed', payment_method: 'cash' },
-  { id: 't11', merchant: 'Tiền thuê nhà',    category: 'bills',         type: 'expense', date: '2026-09-01', amount: 1250, status: 'completed', payment_method: 'transfer' },
-  { id: 't12', merchant: 'Phí bảo hiểm sức khỏe', category: 'health',   type: 'expense', date: '2026-09-01', amount: 45,   status: 'completed', payment_method: 'card' },
-  { id: 't13', merchant: 'Apple Store',       category: 'shopping',      type: 'expense', date: '2026-09-05', amount: 249,  status: 'pending',   payment_method: 'card' },
-  { id: 't14', merchant: 'Spotify',          category: 'entertainment', type: 'expense', date: '2026-09-01', amount: 10,   status: 'completed', payment_method: 'card' },
-  { id: 't15', merchant: 'Xăng xe',          category: 'transport',     type: 'expense', date: '2026-09-04', amount: 55,   status: 'completed', payment_method: 'card' },
-  { id: 't16', merchant: 'Cà phê phin',       category: 'food',        type: 'expense', date: '2026-09-13', amount: 6,    status: 'cancelled', payment_method: 'cash' },
-  { id: 't17', merchant: 'Steam',            category: 'entertainment', type: 'expense', date: '2026-09-10', amount: 30,   status: 'completed', payment_method: 'card' },
-  { id: 't18a', merchant: 'Shopee',           category: 'shopping',      type: 'expense', date: '2026-09-16', amount: 45,   status: 'failed',    payment_method: 'ewallet' },
-  { id: 't19a', merchant: 'Pharmacy',          category: 'health',         type: 'expense', date: '2026-09-14', amount: 50,   status: 'pending',   payment_method: 'card' },
-  { id: 't20a', merchant: 'Vietcombank',       category: 'bills',         type: 'expense', date: '2026-09-15', amount: 3200, status: 'pending',   payment_method: 'transfer' },
-  { id: 't21a', merchant: 'MB Bank',            category: 'bills',         type: 'expense', date: '2026-09-14', amount: 1500, status: 'pending',   payment_method: 'transfer' },
-  { id: 't22a', merchant: 'ZaloPay',            category: 'shopping',      type: 'expense', date: '2026-09-12', amount: 280,  status: 'failed',    payment_method: 'ewallet' },
+  { id: 't01', merchant: 'Lương',            category: 'income',        type: 'income',  date: dOffset(1), amount: 4200, status: 'completed', payment_method: 'transfer' },
+  { id: 't02', merchant: 'Dự án freelance',  category: 'income',        type: 'income',  date: dOffset(2), amount: 2220, status: 'completed', payment_method: 'transfer' },
+  { id: 't03', merchant: 'Siêu thị Co.opmart', category: 'food',        type: 'expense', date: dOffset(0), amount: 86,   status: 'completed', payment_method: 'card' },
+  { id: 't04', merchant: 'Cà phê Highlands',  category: 'food',        type: 'expense', date: dOffset(0), amount: 12,   status: 'pending',   payment_method: 'card' },
+  { id: 't05', merchant: 'Grab',             category: 'transport',     type: 'expense', date: dOffset(1), amount: 18,   status: 'completed', payment_method: 'ewallet' },
+  { id: 't06', merchant: 'Netflix',          category: 'entertainment', type: 'expense', date: dOffset(3), amount: 15,   status: 'cancelled', payment_method: 'card' },
+  { id: 't07', merchant: 'Tiền điện',        category: 'bills',         type: 'expense', date: dOffset(4), amount: 95,   status: 'completed', payment_method: 'transfer' },
+  { id: 't08', merchant: 'Shopee',           category: 'shopping',      type: 'expense', date: dOffset(5), amount: 64,   status: 'failed',    payment_method: 'ewallet' },
+  { id: 't09', merchant: 'Phòng khám',       category: 'health',        type: 'expense', date: dOffset(6), amount: 120,  status: 'completed', payment_method: 'card' },
+  { id: 't10', merchant: 'Chợ dầu xanh',      category: 'food',        type: 'expense', date: dOffset(6), amount: 73,   status: 'completed', payment_method: 'cash' },
+  { id: 't11', merchant: 'Tiền thuê nhà',    category: 'bills',         type: 'expense', date: dOffset(12), amount: 1250, status: 'completed', payment_method: 'transfer' },
+  { id: 't12', merchant: 'Phí bảo hiểm sức khỏe', category: 'health',   type: 'expense', date: dOffset(12), amount: 45,   status: 'completed', payment_method: 'card' },
+  { id: 't13', merchant: 'Apple Store',       category: 'shopping',      type: 'expense', date: dOffset(8), amount: 249,  status: 'pending',   payment_method: 'card' },
+  { id: 't14', merchant: 'Spotify',          category: 'entertainment', type: 'expense', date: dOffset(12), amount: 10,   status: 'completed', payment_method: 'card' },
+  { id: 't15', merchant: 'Xăng xe',          category: 'transport',     type: 'expense', date: dOffset(9), amount: 55,   status: 'completed', payment_method: 'card' },
+  { id: 't16', merchant: 'Cà phê phin',       category: 'food',        type: 'expense', date: dOffset(0), amount: 6,    status: 'cancelled', payment_method: 'cash' },
+  { id: 't17', merchant: 'Steam',            category: 'entertainment', type: 'expense', date: dOffset(3), amount: 30,   status: 'completed', payment_method: 'card' },
+  { id: 't18a', merchant: 'Shopee',           category: 'shopping',      type: 'expense', date: dOffset(2), amount: 45,   status: 'failed',    payment_method: 'ewallet' },
+  { id: 't19a', merchant: 'Pharmacy',          category: 'health',         type: 'expense', date: dOffset(4), amount: 50,   status: 'pending',   payment_method: 'card' },
+  { id: 't20a', merchant: 'Vietcombank',       category: 'bills',         type: 'expense', date: dOffset(1), amount: 3200, status: 'pending',   payment_method: 'transfer' },
+  { id: 't21a', merchant: 'MB Bank',            category: 'bills',         type: 'expense', date: dOffset(2), amount: 1500, status: 'pending',   payment_method: 'transfer' },
+  { id: 't22a', merchant: 'ZaloPay',            category: 'shopping',      type: 'expense', date: dOffset(1), amount: 280,  status: 'failed',    payment_method: 'ewallet' },
 
   // August 2026
   { id: 't18', merchant: 'Lương',            category: 'income',        type: 'income',  date: '2026-08-12', amount: 4200, status: 'completed', payment_method: 'transfer' },

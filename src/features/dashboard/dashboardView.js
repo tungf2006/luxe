@@ -37,7 +37,7 @@ import { t } from '../../utils/i18n.js';
 import { getBudgetProgressClass, getBudgetProgressColor } from '../../utils/progress.js';
 
 /* ---------------------------------------------------------------- *
- * Error boundary helper � wraps widget rendering, catches errors,
+ * Error boundary helper — wraps widget rendering, catches errors,
  * returns widget HTML or a retryable error state.
  * ---------------------------------------------------------------- */
 function errorBoundary(fn, fallbackId = '') {
@@ -47,7 +47,7 @@ function errorBoundary(fn, fallbackId = '') {
     console.error(`[dashboard] widget error${fallbackId ? ` (${fallbackId})` : ''}:`, err);
     return `
       <div class="widget-error" data-retry-widget="${fallbackId || 'widget'}">
-      <div class="widget-error-icon" aria-hidden="true">??</div>
+      <div class="widget-error-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
       <p>${t('dashboard.error.loadFailed')}</p>
       <button type="button" class="btn-secondary btn-sm" data-retry-widget="${fallbackId || 'widget'}">${t('dashboard.error.retry')}</button>
       </div>
@@ -101,8 +101,8 @@ function lastMonthKey() {
 }
 
 /**
- * Build a human-readable comparison range for "last month" in DD�DD/MM/YYYY form.
- * Example for September 2026 ? "01�31/08/2026".
+ * Build a human-readable comparison range for "last month" in DD–DD/MM/YYYY form.
+ * Example for September 2026 → "01–31/08/2026".
  * @returns {string}
  */
 function lastMonthRange() {
@@ -113,7 +113,7 @@ function lastMonthRange() {
   const lastMonthYear = m === 0 ? y - 1 : y;
   const lastDay = new Date(y, m, 0).getDate(); // last calendar day of the prior month
   const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(1)}�${pad(lastDay)}/${pad(lastMonthIndex + 1)}/${lastMonthYear}`;
+  return `${pad(1)}–${pad(lastDay)}/${pad(lastMonthIndex + 1)}/${lastMonthYear}`;
 }
 
 function daysUntilPay(payDayStr, transactions) {
@@ -146,9 +146,9 @@ function kpiIcon(pathFrag) {
  *   - Expenses, whose increase is undesirable:
  *     goodDirection = 'down' ? downward = green, upward = red
  *
- * When there is no prior data to compare (a missing or zero baseline � which
+ * When there is no prior data to compare (a missing or zero baseline — which
  * would otherwise trigger a division-by-zero "+100%"), a muted
- * "Chua c� d? li?u so s�?" fallback is rendered instead.
+ * "Chưa có dữ liệu so sánh" fallback is rendered instead.
  *
  * @param {{direction:'up'|'down'|'flat',change:number}|null} trend  null when no prior data (getTrend returns null)
  * @param {Object} [opts]
@@ -161,7 +161,7 @@ function trendBadgeHTML(trend, { suffix = '%', goodDirection = 'up' } = {}) {
     return `<span class="trend-badge trend-neutral" aria-label="${t('dashboard.kpi.noComparison')}">${t('dashboard.kpi.noComparison')}</span>`;
   }
   if (trend.direction === 'flat') {
-    return `<span class="trend-badge trend-neutral" aria-label="${t('dashboard.kpi.flat')}">�</span>`;
+    return `<span class="trend-badge trend-neutral" aria-label="${t('dashboard.kpi.flat')}">—</span>`;
   }
   const isGood = trend.direction === goodDirection;
   const cls = isGood ? 'trend-positive' : 'trend-negative';
@@ -171,7 +171,7 @@ function trendBadgeHTML(trend, { suffix = '%', goodDirection = 'up' } = {}) {
   const sign = trend.change > 0 ? '+' : '';
   const valence = isGood ? t('dashboard.kpi.good') : t('dashboard.kpi.bad');
   return `
-    <span class="trend-badge ${cls}" aria-label="${sign}${trend.change.toFixed(1)}${suffix} � ${valence}">
+    <span class="trend-badge ${cls}" aria-label="${sign}${trend.change.toFixed(1)}${suffix} — ${valence}">
       ${icon}
       ${sign}${trend.change.toFixed(1)}${suffix}
     </span>
@@ -319,8 +319,9 @@ function spendingChartPanelHTML({ chartHtml, period, incomeTotal, expenseTotal, 
 }
 
 function recentTransactionsHTML(recentTx) {
+  const emptyIcon = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
   const rows = recentTx.length === 0
-        ? `<tr><td colspan="4" class="empty-state-cell"><span class="empty-state-icon" aria-hidden="true">??</span><p style="margin-top:0.5rem;">${t('dashboard.recentTx.empty')}</p></td></tr>`
+        ? `<tr><td colspan="4" class="empty-state-cell"><span class="empty-state-icon" aria-hidden="true">${emptyIcon}</span><p style="margin-top:0.5rem;">${t('dashboard.recentTx.empty')}</p></td></tr>`
         : recentTx.map(tx => {
             const rel = formatRelative(tx.date);
             return `
@@ -364,10 +365,11 @@ function recentTransactionsHTML(recentTx) {
 
 function budgetProgressHTML(budgets) {
   if (budgets.length === 0) {
+    const emptyWalletIcon = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
     return `
       <div class="glass-panel" id="budget-progress-panel">
         ${panelHeaderHTML({ title: t('dashboard.budgetProgress.title'), subtitle: nowFormatted(), iconSvg: DASHBOARD_ICONS.wallet })}
-        <div class="empty-state"><div class="empty-state-content"><span class="empty-state-icon">??</span><p>${t('dashboard.budgetProgress.empty')}</p></div></div>
+        <div class="empty-state"><div class="empty-state-content"><span class="empty-state-icon">${emptyWalletIcon}</span><p>${t('dashboard.budgetProgress.empty')}</p></div></div>
       </div>
     `;
   }
@@ -389,7 +391,7 @@ function budgetProgressHTML(budgets) {
              <span class="budget-percent ${pctClass}" style="color:${statusColor};">${pct}%</span>
            </span>
          </div>
-         <div class="progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${getCategoryLabelVi(b.category)} ng�n s�ch: ${pct}%">
+         <div class="progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${getCategoryLabelVi(b.category)} ngân sách: ${pct}%">
            <div class="progress-fill ${fillClass}" style="width:${pct}%"></div>
         </div>
       </div>
@@ -441,10 +443,10 @@ function quickStatsHTML(netCashFlow, transactions, settings) {
   // Days until pay
   const payDay = settings.payDay || '15th';
   const dayNum = parseInt(payDay, 10);
-  let payDaysHtml = '<span style="color:var(--text-muted);">�</span>';
+  let payDaysHtml = '<span style="color:var(--text-muted);">—</span>';
   if (!isNaN(dayNum)) {
     const days = daysUntilPay(payDay, transactions);
-    payDaysHtml = `<span style="font-weight:600;font-size:0.875rem;">${days} ng�y</span>`;
+    payDaysHtml = `<span style="font-weight:600;font-size:0.875rem;">${days} ngày</span>`;
   }
 
   const netClass = netCashFlow >= 0 ? 'var(--positive)' : 'var(--negative)';
@@ -475,7 +477,7 @@ return `
 }
 
 /* ---------------------------------------------------------------- *
- * Chart period toggle � re-renders the spending chart
+ * Chart period toggle — re-renders the spending chart
  * ---------------------------------------------------------------- */
 async function updateChart(container, period, transactions) {
   const chartContainer = container.querySelector('#spending-chart-container');
@@ -485,8 +487,8 @@ async function updateChart(container, period, transactions) {
   if (!chartContainer) return;
 
   chartContainer.innerHTML = renderChartSkeleton();
-  if (incomeEl) incomeEl.textContent = '�';
-  if (expenseEl) expenseEl.textContent = '�';
+  if (incomeEl) incomeEl.textContent = '—';
+  if (expenseEl) expenseEl.textContent = '—';
   if (badgesContainer) badgesContainer.style.display = 'flex';
 
   await new Promise(r => setTimeout(r, 150));
@@ -589,10 +591,7 @@ container.innerHTML = `
   attachListeners(container);
 
   const regressionTestDiv = document.createElement('div');
-  regressionTestDiv.innerHTML = 'Regression test: ' +
-    '\u00E0\u00E1\u1EA3\u00E3\u1EA1\u0103\u00E2\u00EA\u00F4\u01A1\u01AF\u0111\u0110 \u2013 \u2014 \u2018\u2019 \u201C\u201D \u2026 ' +
-    '\uD83D\u4A96 \u26A0\uFE0F \u2705 ' +
-    'Qu\u1EA3n l\u00FD ng\u00E2n s\u00E1ch, thu \u2013 chi, Ng\u00E0y';
+  regressionTestDiv.innerHTML = 'Regression test: àáảãạăâêôơƯđĐ – — ‘’ “” … 💰 ⚠️ ✅ Quản lý ngân sách, thu – chi, Ngày';
   regressionTestDiv.setAttribute('aria-hidden', 'true');
   regressionTestDiv.setAttribute('id', 'encoding-regression-test');
   regressionTestDiv.style.position = 'absolute';

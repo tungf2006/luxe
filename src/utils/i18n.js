@@ -33,7 +33,9 @@ export async function initI18n(defaultLocale = 'vi') {
 export function setLocale(locale) {
   if (!_translations[locale]) return false;
   _currentLocale = locale;
-  document.documentElement.lang = locale;
+  if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.lang = locale;
+  }
   emit('i18n:changed', { locale });
   return true;
 }
@@ -47,7 +49,32 @@ export function t(key, params = {}) {
     || getNested(_translations['vi'], key)
     || key;
   if (typeof translation !== 'string') return key;
-  return translation.replace(/\{\{(\w+)\}\}/g, (_, p) => params[p] !== undefined ? params[p] : `{{${p}}}`);
+
+  let hasMissingParam = false;
+  let result = translation.replace(/\{\{(\w+)\}\}/g, (_, p) => {
+    if (params && params[p] !== undefined && params[p] !== null) {
+      return params[p];
+    }
+    hasMissingParam = true;
+    return '';
+  });
+
+  if (hasMissingParam) {
+    if (typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '[::1]'
+    )) {
+      console.warn(`[i18n] Missing param for key "${key}" in translation: "${translation}"`);
+    }
+    result = result
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([·—–/|:,])\s*$/g, '')
+      .replace(/^\s*([·—–/|:,])\s*/g, '')
+      .trim();
+  }
+
+  return result;
 }
 
 export function hasLocale(locale) {

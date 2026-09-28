@@ -1,34 +1,38 @@
+# Dependencies
 node_modules/
-.worktrees/
-.stitch/
 package-lock.json
-skills/
+
+# Environment configuration
 .env
-.env.example
+.env.local
+.env.*.local
+
+# Logs and OS files
 *.log
 .DS_Store
 Thumbs.db
 
-# Kilo / AI tooling
-.agents/
-.kilo/
-.headroom.json
-.mcp.json
-.aider-desk/
-.impeccable/
-
-# Headroom
-headroom/
-
-# Debug tooling and screenshots
-tools/
-
-# Legacy monolithic app
-js/
-
-# IDE / editor
+# IDE and Editors
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+
+# AI Assistants and Development Workflows
+AGENTS.md
+CLAUDE.md
+CLAUDE.local.md
+.agents/
+.kilo/
+.stitch/
+.aider-desk/
+.impeccable/
+.worktrees/
+.headroom.json
+.mcp.json
+skills/
+skills-lock.json
+headroom/
+tools/
+js/
