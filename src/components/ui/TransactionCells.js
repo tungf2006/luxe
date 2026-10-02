@@ -9,25 +9,7 @@
 import { CATEGORY_ICONS, CATEGORY_MAP, getCategoryIcon, getCategoryLabelVi, getCategoryColor } from '../../constants/categories.js';
 import { formatAmount, escapeHtml } from '../../utils/format.js';
 
-/**
- * Render the merchant cell (icon + name + optional subtitle).
- * @param {import('../../types/index.js').Transaction} tx
- * @param {boolean} [showSub=false]
- * @returns {string}
- */
-export function merchantCellHTML(tx, showSub = false) {
-  const icon = getCategoryIcon(tx.category) || CATEGORY_ICONS[tx.category] || '📦';
-  const subLabel = showSub ? getCategoryLabelVi(tx.category) || tx.category : '';
-  return `
-    <div class="merchant-cell">
-      <div class="merchant-icon" aria-hidden="true">${icon}</div>
-      <div class="merchant-details">
-        <span class="merchant-name">${escapeHtml(tx.merchant)}</span>
-        ${showSub ? `<span class="merchant-sub">${escapeHtml(subLabel)}</span>` : ''}
-      </div>
-    </div>
-  `;
-}
+
 
 /**
  * Render a category tag pill.
@@ -45,38 +27,78 @@ export function categoryTagHTML(category) {
 }
 
 /**
- * Render a status badge (completed / pending / failed / cancelled).
+ * Render a status badge (pending / failed / cancelled).
+ * Returns empty string for 'completed' as it is the standard default status.
  * @param {'completed'|'pending'|'failed'|'cancelled'} status
  * @returns {string}
  */
 export function statusBadgeHTML(status) {
-  let bg = 'var(--positive-bg)';
-  let color = 'var(--positive)';
-  let icon = '✓';
-  let label = 'Hoàn thành';
-
-  if (status === 'pending') {
-    bg = 'var(--warning-bg)';
-    color = 'var(--warning)';
-    icon = '⏳';
-    label = 'Đang chờ';
-  } else if (status === 'failed') {
-    bg = 'var(--negative-bg)';
-    color = 'var(--negative)';
-    icon = '✕';
-    label = 'Thất bại';
-  } else if (status === 'cancelled') {
-    bg = 'rgba(255, 255, 255, 0.08)';
-    color = 'var(--text-muted)';
-    icon = '🚫';
-    label = 'Đã huỷ';
+  if (!status || status === 'completed') {
+    return '';
   }
 
+  if (status === 'pending') {
+    return `
+      <span class="status-badge status-badge-pending" role="status" aria-label="Đang chờ xử lý">
+        <span class="status-pulse-dot" aria-hidden="true"></span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Đang chờ</span>
+      </span>
+    `;
+  }
+
+  if (status === 'failed') {
+    return `
+      <span class="status-badge status-badge-failed" role="status" aria-label="Thất bại">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+        <span>Thất bại</span>
+      </span>
+    `;
+  }
+
+  if (status === 'cancelled') {
+    return `
+      <span class="status-badge status-badge-cancelled" role="status" aria-label="Đã huỷ">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+        </svg>
+        <span>Đã huỷ</span>
+      </span>
+    `;
+  }
+
+  return '';
+}
+
+/**
+ * Render the merchant cell (icon + name + status badge + optional subtitle).
+ * @param {import('../../types/index.js').Transaction} tx
+ * @param {boolean} [showSub=false]
+ * @returns {string}
+ */
+export function merchantCellHTML(tx, showSub = false) {
+  const icon = getCategoryIcon(tx.category) || CATEGORY_ICONS[tx.category] || '📦';
+  const subLabel = showSub ? getCategoryLabelVi(tx.category) || tx.category : '';
+  const statusBadge = statusBadgeHTML(tx.status);
   return `
-    <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.75rem;font-weight:500;padding:0.2rem 0.65rem;border-radius:var(--radius-full);background:${bg};color:${color};" role="status" aria-label="${label}">
-      <span aria-hidden="true">${icon}</span>
-      ${escapeHtml(label)}
-    </span>
+    <div class="merchant-cell">
+      <div class="merchant-icon" aria-hidden="true">${icon}</div>
+      <div class="merchant-details">
+        <div class="merchant-name-line">
+          <span class="merchant-name">${escapeHtml(tx.merchant)}</span>
+          ${statusBadge}
+        </div>
+        ${showSub ? `<span class="merchant-sub">${escapeHtml(subLabel)}</span>` : ''}
+      </div>
+    </div>
   `;
 }
 
@@ -105,9 +127,24 @@ export function paymentMethodHTML(method) {
  * Render 3-dots action dropdown menu.
  * @param {string} id - Item ID
  * @param {string} [type='tx'] - 'tx' or 'recurring'
+ * @param {string} [status='completed'] - Transaction status
  * @returns {string}
  */
-export function actionDropdownHTML(id, type = 'tx') {
+export function actionDropdownHTML(id, type = 'tx', status = 'completed') {
+  const retryBtn = status === 'failed' ? `
+    <button type="button" class="action-menu-item action-retry" data-action="retry-${type}" data-id="${id}" role="menuitem">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+      Thử lại
+    </button>
+  ` : '';
+
+  const completeBtn = status === 'pending' ? `
+    <button type="button" class="action-menu-item action-complete" data-action="complete-${type}" data-id="${id}" role="menuitem">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+      Xác nhận hoàn thành
+    </button>
+  ` : '';
+
   return `
     <div class="action-dropdown" data-id="${id}">
       <button type="button" class="btn-action-trigger" aria-label="Tùy chọn hành động" data-action="toggle-menu">
@@ -118,6 +155,8 @@ export function actionDropdownHTML(id, type = 'tx') {
         </svg>
       </button>
       <div class="action-dropdown-menu" role="menu">
+        ${retryBtn}
+        ${completeBtn}
         <button type="button" class="action-menu-item" data-action="view-${type}" data-id="${id}" role="menuitem">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
           Xem chi tiết

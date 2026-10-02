@@ -6,7 +6,7 @@
 
 import dataService from '../../services/dataAdapter.js';
 import { formatCurrency, formatAmount, escapeHtml, formatRelative, formatDateShort, formatDateLong, parseNumber } from '../../utils/format.js';
-import { CATEGORIES, CATEGORY_MAP } from '../../constants/categories.js';
+import { CATEGORY_MAP } from '../../constants/categories.js';
 import { panelHeaderHTML } from '../../components/ui/PanelHeader.js';
 import { kpiCardHTML } from '../../components/ui/KPICard.js';
 import { showToast, showToastWithAction } from '../../components/ui/Toast.js';

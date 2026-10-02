@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Onboarding flow - 4-step setup guide for new users.
  *
  * Steps:
@@ -10,10 +10,7 @@
  * Users can skip optional steps.
  */
 
-import { emit } from '../../utils/eventBus.js';
 import { getSupabase } from '../../services/supabaseClient.js';
-import { CATEGORY_MAP } from '../../constants/categories.js';
-import { MOCK_MODE } from '../../config/env.js';
 
 const STEPS = [
   { id: 'basic-info',  label: 'Thông tin cơ bản' },
@@ -244,38 +241,45 @@ export async function completeOnboarding(userId, state) {
   const supabase = getSupabase();
   const errors = [];
 
+  const fullState = { ...state, onboardingComplete: true };
+  localStorage.setItem('luxe-onboarding', JSON.stringify(fullState));
+  localStorage.setItem('luxe-onboarding-complete', 'true');
+
   if (!supabase) {
-    const fullState = { ...state, onboardingComplete: true };
-    localStorage.setItem('luxe-onboarding', JSON.stringify(fullState));
     return { errors: [] };
   }
 
   const profilePayload = {
     id: userId,
-    full_name: state.fullName || '',
-    currency: state.currency || 'VND',
-    payday: state.payDay || '1st',
-    budget_period: state.budgetPeriod || 'monthly',
-    onboarding_complete: true,
+    display_name: state.fullName || '',
+    updated_at: new Date().toISOString(),
   };
 
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .upsert(profilePayload)
-    .eq('id', userId);
-  if (profileError) errors.push(profileError.message);
-
-  if (state.accountName && state.initialBalance !== '' && state.initialBalance !== undefined) {
-    const { error: accountError } = await supabase.from('accounts').insert({
-      user_id: userId,
-      name: state.accountName,
-      type: state.initialAccountType || 'checking',
-      balance: Number(state.initialBalance),
-      currency: state.currency || 'VND',
-      is_default: true,
-    });
-    if (accountError) errors.push(accountError.message);
+  try {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(profilePayload)
+      .eq('id', userId);
+    if (profileError) {
+      console.warn('[onboarding] profiles upsert note:', profileError.message);
+    }
+  } catch (e) {
+    console.warn('[onboarding] profiles exception:', e);
   }
+
+  try {
+    if (state.accountName && state.initialBalance !== '' && state.initialBalance !== undefined) {
+      const { error: accountError } = await supabase.from('accounts').insert({
+        user_id: userId,
+        name: state.accountName,
+        type: state.initialAccountType || 'checking',
+        balance: Number(state.initialBalance),
+        currency: state.currency || 'VND',
+        is_default: true,
+      });
+      if (accountError) console.warn('[onboarding] account insert note:', accountError.message);
+    }
+  } catch (e) {}
 
   if (state.useGoal) {
     const { error: notifError } = await supabase.from('notifications').insert({

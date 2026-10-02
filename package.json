@@ -7,10 +7,15 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node test-donut-chart.js",
-    "test:i18n": "node test-i18n-no-leak.js",
-    "test:typography": "node test-typography.js",
-    "smoke": "node test-app.js"
+    "test": "node test/test-donut-chart.js",
+    "test:unit": "node test/test-banks.js && node test/test-donut-chart.js && node test/test-i18n-no-leak.js",
+    "test:i18n": "node test/test-i18n-no-leak.js",
+    "test:typography": "node test/test-typography.js",
+    "test:guest-csp": "node test/test-guest-and-csp.js",
+    "test:all": "node test/test-banks.js && node test/test-donut-chart.js && node test/test-i18n-no-leak.js",
+    "smoke": "node test/test-app.js",
+    "check:encoding": "node tools/check-encoding.js",
+    "verify": "node tools/verify-all.js"
   },
   "allowScripts": {
     "puppeteer": true

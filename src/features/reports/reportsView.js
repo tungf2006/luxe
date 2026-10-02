@@ -11,11 +11,13 @@ import dataService, {
 } from '../../services/dataService.js';
 import { BarChart, BarChartLegend, initBarChartTooltips } from '../../components/charts/BarChart.js';
 import { DonutChart, initDonutChart } from '../../components/charts/DonutChart.js';
-import { formatCurrency, formatCompactCurrency, escapeHtml, formatMonthYear } from '../../utils/format.js';
+import { formatCurrency, formatCompactCurrency, formatMonthYear, getLocalDateString, getLocalMonthString } from '../../utils/format.js';
 import { showToast } from '../../components/ui/Toast.js';
 import { pageHeaderHTML } from '../../components/ui/PageHeader.js';
 import { getRoute } from '../../config/routes.js';
 import { CATEGORY_MAP } from '../../constants/categories.js';
+import { t } from '../../utils/i18n.js';
+import { emit } from '../../utils/eventBus.js';
 
 /* --------------------------------------------------------------- *
  * SVG icon fragments
@@ -132,8 +134,8 @@ function reportHeaderHTML(route) {
   for (let i = 0; i < 3; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push({
-      value: d.toISOString().slice(0, 7),
-      label: formatMonthYear(d.toISOString().slice(0, 10)),
+      value: getLocalMonthString(d),
+      label: formatMonthYear(getLocalDateString(d)),
     });
   }
   months.push({ value: 'q3', label: 'Q3 2026' });

@@ -14,22 +14,97 @@
  */
 
 import { load, save, STORAGE_KEYS } from './storage.js';
-import { DEFAULT_TRANSACTIONS, DEFAULT_BUDGETS, DEFAULT_SETTINGS, DEFAULT_ACCOUNTS, DEFAULT_GOALS, DEFAULT_RECURRING } from './mockData.js';
-import { generateId, formatCurrency, parseNumber, formatMonthYear } from '../utils/format.js';
-import { CATEGORIES, CATEGORY_MAP, getCategoryLabelVi, getCategoryColor } from '../constants/categories.js';
+import {
+  getDefaultTransactions,
+  getDefaultBudgets,
+  getDefaultAccounts,
+  getDefaultGoals,
+  getDefaultRecurring,
+  DEFAULT_SETTINGS,
+} from './mockData.js';
+import {
+  generateId,
+  formatCurrency,
+  parseNumber,
+  formatMonthYear,
+  getLocalDateString,
+  getLocalMonthString,
+} from '../utils/format.js';
+import { CATEGORIES, getCategoryLabelVi, getCategoryColor } from '../constants/categories.js';
+
+export const SEED_VERSION = 'v2026.5';
 
 /* ------------------------------------------------------------------ *
- * In-memory state (mirrors localStorage for the session)
+ * Initialization with SEED_VERSION migration
  * ------------------------------------------------------------------ */
-let transactions = load(STORAGE_KEYS.TRANSACTIONS, DEFAULT_TRANSACTIONS);
-let budgets = load(STORAGE_KEYS.BUDGETS, DEFAULT_BUDGETS);
-let settings = load(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
-let accounts = load(STORAGE_KEYS.ACCOUNTS, DEFAULT_ACCOUNTS);
-let goals = load(STORAGE_KEYS.GOALS, DEFAULT_GOALS);
-let recurring = load(STORAGE_KEYS.RECURRING, DEFAULT_RECURRING);
+function initData() {
+  const storedVersion = load(STORAGE_KEYS.SEED_VERSION, null);
+  const rawTx = load(STORAGE_KEYS.TRANSACTIONS, null);
+  const rawBudgets = load(STORAGE_KEYS.BUDGETS, null);
+  const rawSettings = load(STORAGE_KEYS.SETTINGS, null);
+  const rawAccounts = load(STORAGE_KEYS.ACCOUNTS, null);
+  const rawGoals = load(STORAGE_KEYS.GOALS, null);
+  const rawRecurring = load(STORAGE_KEYS.RECURRING, null);
+
+  let initialTx;
+  if (!rawTx || storedVersion !== SEED_VERSION) {
+    // Preserve custom user-added transactions (not part of the default seed IDs)
+    const freshSeed = getDefaultTransactions();
+    const seedIds = new Set(freshSeed.map(t => t.id));
+    const userCreatedTx = Array.isArray(rawTx)
+      ? rawTx.filter(tx => tx && tx.id && !seedIds.has(tx.id) && !tx.isSeed && !/^t\d+[a-z]?$/i.test(tx.id))
+      : [];
+
+    initialTx = [...userCreatedTx, ...freshSeed];
+    save(STORAGE_KEYS.TRANSACTIONS, initialTx);
+    save(STORAGE_KEYS.SEED_VERSION, SEED_VERSION);
+  } else {
+    initialTx = rawTx;
+  }
+
+  let initialBudgets;
+  if (!rawBudgets || storedVersion !== SEED_VERSION) {
+    const defaultBudgets = getDefaultBudgets();
+    if (Array.isArray(rawBudgets) && rawBudgets.length > 0) {
+      const budgetMap = new Map(rawBudgets.map(b => [b.category, b]));
+      initialBudgets = defaultBudgets.map(b => {
+        const existing = budgetMap.get(b.category);
+        return existing ? { ...b, limit: existing.limit } : b;
+      });
+      // Add custom categories that user created
+      for (const b of rawBudgets) {
+        if (!initialBudgets.some(db => db.category === b.category)) {
+          initialBudgets.push(b);
+        }
+      }
+    } else {
+      initialBudgets = defaultBudgets;
+    }
+    save(STORAGE_KEYS.BUDGETS, initialBudgets);
+  } else {
+    initialBudgets = rawBudgets;
+  }
+
+  return {
+    transactions: initialTx,
+    budgets: initialBudgets,
+    settings: rawSettings || DEFAULT_SETTINGS,
+    accounts: (Array.isArray(rawAccounts) && rawAccounts.length > 0) ? rawAccounts : getDefaultAccounts(),
+    goals: rawGoals || getDefaultGoals(),
+    recurring: rawRecurring || getDefaultRecurring(),
+  };
+}
+
+const _initialState = initData();
+let transactions = _initialState.transactions;
+let budgets = _initialState.budgets;
+let settings = _initialState.settings;
+let accounts = _initialState.accounts;
+let goals = _initialState.goals;
+let recurring = _initialState.recurring;
 
 /* ------------------------------------------------------------------ *
- * Persistence helper — saves all mutable state to localStorage
+ * Persistence helper — saves all mutable state to storage
  * ------------------------------------------------------------------ */
 function persist() {
   save(STORAGE_KEYS.TRANSACTIONS, transactions);
@@ -39,6 +114,11 @@ function persist() {
   save(STORAGE_KEYS.GOALS, goals);
   save(STORAGE_KEYS.RECURRING, recurring);
 }
+
+// Ensure all defaults are persisted on first load so IndexedDB migration
+// can pick them up (previously, settings/accounts/goals/recurring were
+// only written to storage on first user edit, not on init)
+persist();
 
 /* ------------------------------------------------------------------ *
  * Analytics / derived data
@@ -53,7 +133,7 @@ export function computeTotals(txList) {
   let income = 0, expenses = 0;
   if (Array.isArray(txList)) {
     for (const tx of txList) {
-      if (!tx) continue;
+      if (!tx || tx.status === 'cancelled' || tx.status === 'failed') continue;
       const amt = parseNumber(tx.amount);
       if (tx.type === 'income') income += amt;
       else expenses += amt;
@@ -90,7 +170,7 @@ export function getSpendingByCategory(txList) {
   if (!Array.isArray(txList)) return [];
   const map = {};
   for (const tx of txList) {
-    if (!tx || tx.type !== 'expense') continue;
+    if (!tx || tx.type !== 'expense' || tx.status === 'cancelled' || tx.status === 'failed') continue;
     const amt = parseNumber(tx.amount);
     map[tx.category] = (map[tx.category] || 0) + amt;
   }
@@ -118,10 +198,17 @@ export function getSpendingByCategory(txList) {
  * @returns {Budget[]}
  */
 export function getBudgetProgress(budgetList, txList) {
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const monthExpenses = txList.filter(tx =>
-    tx.type === 'expense' && tx.date.startsWith(currentMonth));
-  return budgetList
+  const currentMonth = getLocalMonthString(new Date());
+  const monthExpenses = (txList || []).filter(tx =>
+    tx &&
+    tx.type === 'expense' &&
+    tx.status !== 'cancelled' &&
+    tx.status !== 'failed' &&
+    typeof tx.date === 'string' &&
+    tx.date.startsWith(currentMonth)
+  );
+
+  return (budgetList || [])
     .map(b => {
       const spent = monthExpenses
         .filter(tx => tx.category === b.category)
@@ -142,18 +229,18 @@ export function getBudgetProgress(budgetList, txList) {
  * Monthly cash-flow series for the last N months.
  * @param {Transaction[]} txList
  * @param {number} [months=6]
- * @returns {Array<{label:string, income:number, expenses:number}>}
+ * @returns {Array<{label:string, fullLabel:string, monthKey:string, income:number, expenses:number}>}
  */
 export function getMonthlyCashFlow(txList, months = 6) {
   const now = new Date();
   const series = [];
   for (let i = months - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthKey = d.toISOString().slice(0, 7); // YYYY-MM
+    const monthKey = getLocalMonthString(d); // YYYY-MM
     const monthNum = d.getMonth() + 1;
     const label = `T${monthNum}`;
-    const fullLabel = formatMonthYear(d.toISOString().slice(0, 10));
-    const monthTx = (txList || []).filter(tx => tx && tx.date && tx.date.startsWith(monthKey));
+    const fullLabel = formatMonthYear(getLocalDateString(d));
+    const monthTx = (txList || []).filter(tx => tx && typeof tx.date === 'string' && tx.date.startsWith(monthKey));
     const totals = computeTotals(monthTx);
     series.push({ label, fullLabel, monthKey, income: totals.income, expenses: totals.expenses });
   }
@@ -172,8 +259,8 @@ export function getWeeklySeries(txList) {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(now.getDate() - i);
-    const dateStr = d.toISOString().slice(0, 10);
-    const dayTx = txList.filter(tx => tx.date === dateStr);
+    const dateStr = getLocalDateString(d);
+    const dayTx = (txList || []).filter(tx => tx && tx.date === dateStr);
     const totals = computeTotals(dayTx);
     series.push({ label: labels[(d.getDay() + 6) % 7], income: totals.income, expenses: totals.expenses });
   }
@@ -187,8 +274,8 @@ export function getWeeklySeries(txList) {
  * @returns {{text:string, detail:string, type:'positive'|'warning'|'info'}}
  */
 export function generateInsight(txList, budgetList) {
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const monthTx = txList.filter(tx => tx.date.startsWith(currentMonth));
+  const currentMonth = getLocalMonthString(new Date());
+  const monthTx = (txList || []).filter(tx => tx && typeof tx.date === 'string' && tx.date.startsWith(currentMonth));
   const totals = computeTotals(monthTx);
 
   // Check if any budget is near/over limit
@@ -312,11 +399,15 @@ export const dataService = {
 
   /* ---- Accounts ---- */
   async getAccounts() {
+    if (!Array.isArray(accounts) || accounts.length === 0) {
+      accounts = getDefaultAccounts();
+      persist();
+    }
     return [...accounts];
   },
 
   async addAccount(account) {
-    const newAccount = { id: generateId(), ...account };
+    const newAccount = { id: account.id || generateId(), ...account };
     accounts.push(newAccount);
     persist();
     return newAccount;
@@ -407,12 +498,13 @@ export const dataService = {
 
   /* ---- Persistence ---- */
   async resetToDefaults() {
-    transactions = [...DEFAULT_TRANSACTIONS];
-    budgets = [...DEFAULT_BUDGETS];
+    transactions = getDefaultTransactions();
+    budgets = getDefaultBudgets();
     settings = { ...DEFAULT_SETTINGS };
-    accounts = [...DEFAULT_ACCOUNTS];
-    goals = [...DEFAULT_GOALS];
-    recurring = [...DEFAULT_RECURRING];
+    accounts = getDefaultAccounts();
+    goals = getDefaultGoals();
+    recurring = getDefaultRecurring();
+    save(STORAGE_KEYS.SEED_VERSION, SEED_VERSION);
     persist();
   },
 };

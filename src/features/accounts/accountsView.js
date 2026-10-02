@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file Accounts feature module.
  * Renders the accounts page with account cards.
  */
@@ -8,10 +8,9 @@ import { formatCurrency, formatCompactCurrency, escapeHtml, getActiveCurrency } 
 import { DonutChart, initDonutChart } from '../../components/charts/DonutChart.js';
 import { panelHeaderHTML } from '../../components/ui/PanelHeader.js';
 import { showToast } from '../../components/ui/Toast.js';
-import { emit } from '../../utils/eventBus.js';
 import { pageHeaderHTML } from '../../components/ui/PageHeader.js';
 import { getRoute } from '../../config/routes.js';
-import { getBankAvatarInfo } from '../../constants/banks.js';
+import { getBankAvatarInfo, getBankAvatarHtml } from '../../constants/banks.js';
 
 const ICONS = {
 
@@ -24,39 +23,67 @@ function kpiIcon(pathFrag) {
   return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${pathFrag}</svg>`;
 }
 
+function extractLast4(account) {
+  if (account.account_number) {
+    const s = String(account.account_number).trim();
+    return s.length >= 4 ? s.slice(-4) : s;
+  }
+  if (account.accountNumber) {
+    const s = String(account.accountNumber).trim();
+    return s.length >= 4 ? s.slice(-4) : s;
+  }
+  const numMatch = (account.name || '').match(/(\d{4})(?!\d)/);
+  if (numMatch) return numMatch[1];
+  return null;
+}
+
 function accountCardHTML(account) {
-  const typeLabel = account.type === 'checking' ? 'Thanh toán' : account.type === 'savings' ? 'Tiết kiệm' : account.type === 'credit' ? 'Thẻ tín dụng' : account.type;
+  const typeMap = {
+    checking: 'Thanh toán',
+    savings: 'Tiết kiệm',
+    credit: 'Thẻ tín dụng',
+    cash: 'Tiền mặt',
+    wallet: 'Ví điện tử',
+    ewallet: 'Ví điện tử',
+  };
+  const typeLabel = typeMap[account.type] || account.type || 'Tài khoản';
   const avatar = getBankAvatarInfo(account.name);
   const balanceClass = account.balance >= 0 ? 'highlight-positive' : 'highlight-negative';
   const currencyBadge = account.currency || getActiveCurrency();
+  const last4 = extractLast4(account);
 
   return `
-    <div class="account-card" id="account-card-${account.id}">
-      <div class="account-actions">
-        <button class="account-menu-btn" data-action="toggle-menu" aria-label="Tùy chọn tài khoản" aria-expanded="false" aria-controls="account-menu-${account.id}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="1"></circle>
-            <circle cx="19" cy="12" r="1"></circle>
-            <circle cx="5" cy="12" r="1"></circle>
-          </svg>
-        </button>
-        <div class="account-menu-dropdown" id="account-menu-${account.id}" role="menu">
-          <button class="account-menu-item" data-action="edit-account" data-account-id="${account.id}" role="menuitem">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            Sửa
-          </button>
-          <div class="account-menu-divider"></div>
-          <button class="account-menu-item danger" data-action="delete-account" data-account-id="${account.id}" role="menuitem">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            Xoá
-          </button>
-        </div>
-      </div>
+    <div class="account-card" id="account-card-${account.id}" style="background: radial-gradient(circle at top left, ${avatar.bg}14 0%, rgba(255, 255, 255, 0.02) 65%), var(--bg-surface); border-color: ${avatar.bg}33;">
       <div class="account-card-header">
-        <div class="account-icon account-avatar" style="background:${avatar.bg};color:${avatar.textColor};" aria-hidden="true">${escapeHtml(avatar.initial)}</div>
-        <div class="account-info">
-          <div class="account-name">${escapeHtml(account.name)}</div>
-          <div class="account-type ${account.type}">${typeLabel}</div>
+        <div class="account-card-main">
+          ${getBankAvatarHtml(account.name, 'md', 'account-card-avatar')}
+          <div class="account-info">
+            <div class="account-name" title="${escapeHtml(account.name)}">${escapeHtml(account.name)}</div>
+            <div class="account-meta-row">
+              <span class="account-type-badge ${escapeHtml(account.type || '')}">${escapeHtml(typeLabel)}</span>
+              ${last4 ? `<span class="account-number-pill" title="Số tài khoản kết thúc bằng ${escapeHtml(last4)}">•••• ${escapeHtml(last4)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="account-actions">
+          <button class="account-menu-btn" data-action="toggle-menu" aria-label="Tùy chọn tài khoản" aria-expanded="false" aria-controls="account-menu-${account.id}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="19" cy="12" r="1"></circle>
+              <circle cx="5" cy="12" r="1"></circle>
+            </svg>
+          </button>
+          <div class="account-menu-dropdown" id="account-menu-${account.id}" role="menu">
+            <button class="account-menu-item" data-action="edit-account" data-account-id="${account.id}" role="menuitem">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              Sửa
+            </button>
+            <div class="account-menu-divider"></div>
+            <button class="account-menu-item danger" data-action="delete-account" data-account-id="${account.id}" role="menuitem">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Xoá
+            </button>
+          </div>
         </div>
       </div>
       <div class="account-balance ${balanceClass}">

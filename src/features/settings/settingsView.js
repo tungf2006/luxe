@@ -9,10 +9,18 @@ import dataService from '../../services/dataService.js';
 import { showToast } from '../../components/ui/Toast.js';
 import { emit } from '../../utils/eventBus.js';
 import { escapeHtml } from '../../utils/format.js';
-import { setActiveCurrency, getActiveCurrency } from '../../utils/format.js';
+import { setActiveCurrency } from '../../utils/format.js';
 import { CATEGORIES } from '../../constants/categories.js';
 import { pageHeaderHTML } from '../../components/ui/PageHeader.js';
 import { getRoute } from '../../config/routes.js';
+import { t } from '../../utils/i18n.js';
+import {
+  renderPasswordField,
+  renderPasswordStrengthMeter,
+  initPasswordToggles,
+  updatePasswordStrengthUI,
+  setFieldError,
+} from '../../components/ui/PasswordField.js';
 
 /* --------------------------------------------------------------- *
  * Constants
@@ -280,80 +288,67 @@ function sessionDeviceIcon(device) {
  * --------------------------------------------------------------- */
 function securityPanelHTML() {
   const sessions = [
-    { device: 'Chrome trên Windows', location: 'Hà Nội, VN', time: 'Hiện tại', current: true },
-    { device: 'Safari trên iPhone',   location: 'TP.HCM, VN',  time: '2 giờ trước', current: false },
+    { id: 'ses-1', device: t('settings.device.chromeWin', 'Chrome trên Windows'), location: t('settings.device.locationHanoi', 'Hà Nội, VN'), time: t('settings.security.sessions.current', 'Hiện tại'), current: true },
+    { id: 'ses-2', device: t('settings.device.safariIphone', 'Safari trên iPhone'),   location: t('settings.device.locationHcm', 'TP.HCM, VN'),  time: t('settings.security.sessions.ago1', '2 giờ trước'), current: false },
   ];
   const sessionRows = sessions.map(ses => `
-    <div class="settings-session-row">
+    <div class="settings-session-row" data-session-id="${ses.id}">
       <div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <span class="session-device-icon" aria-hidden="true">${sessionDeviceIcon(ses.device)}</span>
-          <span style="font-size:0.875rem;font-weight:600;">${ses.device}${ses.current ? ' <span class="settings-session-badge">Hiện tại</span><span class="session-active-dot" aria-label="Đang hoạt động"></span>' : ''}</span>
+          <span style="font-size:0.875rem;font-weight:600;">${escapeHtml(ses.device)}${ses.current ? ` <span class="settings-session-badge">${t('settings.security.sessions.current', 'Hiện tại')}</span><span class="session-active-dot" aria-label="Đang hoạt động"></span>` : ''}</span>
         </div>
-        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">${ses.location} · ${ses.time}</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">${escapeHtml(ses.location)} · ${escapeHtml(ses.time)}</div>
       </div>
-      ${ses.current ? '' : `<button class="btn-secondary" style="font-size:0.78rem;padding:0.25rem 0.7rem;" data-action="revoke-session">Thu hồi</button>`}
+      ${ses.current ? '' : `<button class="btn-secondary" style="font-size:0.78rem;padding:0.25rem 0.7rem;" data-action="revoke-session">${t('settings.security.sessions.revoke', 'Thu hồi')}</button>`}
     </div>`).join('');
 
   return `
     <div class="settings-panel" id="panel-security" role="tabpanel" aria-labelledby="stab-security" hidden>
-      ${sectionHeadHTML('Mật khẩu')}
+      ${sectionHeadHTML(t('settings.sections.password', 'Mật khẩu'))}
       <div class="settings-form-grid settings-form-grid--narrow">
-        <div class="form-group">
-          <label class="form-label" for="s-pw-current">Mật khẩu hiện tại</label>
-          <div class="password-input-wrapper">
-            <input class="form-input password-input" type="password" id="s-pw-current" placeholder="••••••••"/>
-            <button type="button" class="password-toggle" data-pw-toggle="s-pw-current" aria-label="Hiện/ẩn mật khẩu" tabindex="-1">
-              <span class="password-toggle-icon" aria-hidden="true">${icon('<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>', 14)}</span>
-            </button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="s-pw-new">Mật khẩu mới</label>
-          <div class="password-input-wrapper">
-            <input class="form-input password-input" type="password" id="s-pw-new" placeholder="Tối thiểu 8 ký tự"/>
-            <button type="button" class="password-toggle" data-pw-toggle="s-pw-new" aria-label="Hiện/ẩn mật khẩu" tabindex="-1">
-              <span class="password-toggle-icon" aria-hidden="true">${icon('<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>', 14)}</span>
-            </button>
-          </div>
-          <div class="password-strength" id="pw-strength" style="display:none;">
-            <div class="password-strength-bar">
-              <div class="password-strength-fill" id="pw-strength-fill"></div>
-            </div>
-            <span class="password-strength-text" id="pw-strength-text"></span>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="s-pw-confirm">Xác nhận mật khẩu mới</label>
-          <div class="password-input-wrapper">
-            <input class="form-input password-input" type="password" id="s-pw-confirm" placeholder="Nhập lại mật khẩu"/>
-            <button type="button" class="password-toggle" data-pw-toggle="s-pw-confirm" aria-label="Hiện/ẩn mật khẩu" tabindex="-1">
-              <span class="password-toggle-icon" aria-hidden="true">${icon('<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>', 14)}</span>
-            </button>
-          </div>
-          <span class="form-error" id="pw-confirm-error"></span>
-        </div>
+        ${renderPasswordField({
+          id: 's-pw-current',
+          label: t('settings.security.currentPassword', 'Mật khẩu hiện tại'),
+          placeholder: t('settings.security.currentPlaceholder', '••••••••'),
+          autocomplete: 'current-password',
+        })}
         <div>
-          <button class="btn-secondary" id="btn-change-password" data-action="change-password" style="font-size:0.85rem;" disabled>Đổi mật khẩu</button>
+          ${renderPasswordField({
+            id: 's-pw-new',
+            label: t('settings.security.newPassword', 'Mật khẩu mới'),
+            placeholder: t('settings.security.newPlaceholder', 'Tối thiểu 8 ký tự'),
+            autocomplete: 'new-password',
+          })}
+          ${renderPasswordStrengthMeter({ id: 'pw-strength' })}
+        </div>
+        ${renderPasswordField({
+          id: 's-pw-confirm',
+          label: t('settings.security.confirmPassword', 'Xác nhận mật khẩu mới'),
+          placeholder: t('settings.security.confirmPlaceholder', 'Nhập lại mật khẩu'),
+          autocomplete: 'new-password',
+        })}
+        <div>
+          <button class="btn-secondary" id="btn-change-password" data-action="change-password" style="font-size:0.85rem;" disabled>${t('settings.security.changePassword', 'Đổi mật khẩu')}</button>
         </div>
       </div>
 
-      ${sectionHeadHTML('Bảo mật nâng cao')}
-      ${rowHTML('Xác thực hai yếu tố (2FA)',
-        'Yêu cầu mã xác nhận mỗi lần đăng nhập',
-        toggleHTML('toggle-2fa', false, 'Xác thực hai yếu tố'))}
+      ${sectionHeadHTML(t('settings.sections.advanced', 'Bảo mật nâng cao'))}
+      ${rowHTML(t('settings.security.twoFactor', 'Xác thực hai yếu tố (2FA)'),
+        t('settings.security.twoFactorDesc', 'Yêu cầu mã xác nhận mỗi lần đăng nhập'),
+        toggleHTML('toggle-2fa', false, t('settings.security.twoFactor', 'Xác thực hai yếu tố')))}
 
-      ${sectionHeadHTML('Phiên đăng nhập')}
-      <div class="settings-sessions-list">${sessionRows}</div>
+      ${sectionHeadHTML(t('settings.security.sessions.title', 'Phiên đăng nhập'))}
+      <div class="settings-sessions-list" id="settings-sessions-list">${sessionRows}</div>
       <div>
-        <button class="btn-secondary" data-action="revoke-all" style="font-size:0.82rem;">Thu hồi tất cả phiên khác</button>
+        <button class="btn-secondary" data-action="revoke-all" style="font-size:0.82rem;">${t('settings.security.sessions.revokeAll', 'Đăng xuất tất cả thiết bị khác')}</button>
       </div>
 
-      ${sectionHeadHTML('Vùng nguy hiểm')}
-      ${rowHTML('Xoá tài khoản',
-        'Xoá vĩnh viễn tài khoản và toàn bộ dữ liệu. Không thể hoàn tác.',
+      ${sectionHeadHTML(t('settings.sections.danger', 'Vùng nguy hiểm'))}
+      ${rowHTML(t('settings.security.deleteAccount', 'Xoá tài khoản'),
+        t('settings.security.deleteAccountDesc', 'Xoá vĩnh viễn tài khoản và toàn bộ dữ liệu. Không thể hoàn tác.'),
         `<button class="btn-danger" id="btn-delete-account" data-action="delete-account">
-          ${icon('<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>', 13)} Xoá tài khoản
+          ${icon('<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>', 13)} ${t('settings.security.deleteAccount', 'Xoá tài khoản')}
         </button>`,
         { destructive: true })}
     </div>`;
@@ -581,13 +576,21 @@ function attachListeners(container, settings) {
     }
 
     if (action === 'change-password') {
-      const current = container.querySelector('#s-pw-current')?.value;
-      const pw = container.querySelector('#s-pw-new')?.value;
-      const confirm = container.querySelector('#s-pw-confirm')?.value;
-      if (!current) { showToast('Vui lòng nhập mật khẩu hiện tại.', 'error'); return; }
-      if (!pw) { showToast('Vui lòng nhập mật khẩu mới.', 'error'); return; }
-      if (pw !== confirm) { showToast('Mật khẩu xác nhận không khớp.', 'error'); return; }
-      showToast('Mật khẩu đã được cập nhật!', 'success');
+      const current = container.querySelector('#s-pw-current')?.value || '';
+      const pw = container.querySelector('#s-pw-new')?.value || '';
+      const confirm = container.querySelector('#s-pw-confirm')?.value || '';
+      if (!current) { showToast(t('settings.toasts.passwordRequired', 'Vui lòng nhập mật khẩu hiện tại.'), 'error'); return; }
+      if (!pw) { showToast(t('settings.toasts.passwordRequired', 'Vui lòng nhập mật khẩu mới.'), 'error'); return; }
+      if (pw !== confirm) { showToast(t('settings.toasts.passwordMismatch', 'Mật khẩu xác nhận không khớp.'), 'error'); return; }
+      
+      showToast(t('settings.toasts.passwordUpdated', 'Mật khẩu đã được cập nhật!'), 'success');
+      const pwCurrent = container.querySelector('#s-pw-current');
+      const pwNew = container.querySelector('#s-pw-new');
+      const pwConfirm = container.querySelector('#s-pw-confirm');
+      if (pwCurrent) pwCurrent.value = '';
+      if (pwNew) pwNew.value = '';
+      if (pwConfirm) pwConfirm.value = '';
+      validatePasswordForm();
     }
 
     if (action === 'add-cat') {
@@ -609,11 +612,13 @@ function attachListeners(container, settings) {
 
     if (action === 'revoke-session') {
       e.target.closest('.settings-session-row')?.remove();
-      showToast('Phiên đã bị thu hồi.', 'success');
+      showToast(t('settings.toasts.sessionRevoked', 'Phiên đã bị thu hồi.'), 'success');
     }
 
     if (action === 'revoke-all') {
-      showToast('Tất cả phiên khác đã bị thu hồi.', 'success');
+      const otherRows = container.querySelectorAll('.settings-session-row:not(:has(.settings-session-badge))');
+      otherRows.forEach(r => r.remove());
+      showToast(t('settings.toasts.allSessionsRevoked', 'Tất cả phiên khác đã bị thu hồi.'), 'success');
     }
 
     if (action === 'delete-account') {
@@ -626,86 +631,38 @@ function attachListeners(container, settings) {
   }, sig);
 
   /* ---- Password visibility toggles ---- */
-  container.querySelectorAll('[data-pw-toggle]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const inputId = btn.dataset.pwToggle;
-      const input = container.querySelector('#' + inputId);
-      if (!input) return;
-      const isPassword = input.type === 'password';
-      input.type = isPassword ? 'text' : 'password';
-      const iconSpan = btn.querySelector('.password-toggle-icon');
-      if (iconSpan) {
-        iconSpan.innerHTML = isPassword
-          ? icon('<path d="M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 3-3c0-1.66-1.34-3-3-3a3 3 0 0 0-1.12-2.12Z"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><line x1="2" y1="2" x2="22" y2="22"/>', 14)
-          : icon('<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>', 14);
-      }
-    });
-  });
+  initPasswordToggles(container);
 
   /* ---- Password strength & confirm validation ---- */
+  const pwCurrent = container.querySelector('#s-pw-current');
   const pwNew = container.querySelector('#s-pw-new');
   const pwConfirm = container.querySelector('#s-pw-confirm');
-  const pwStrengthEl = container.querySelector('#pw-strength');
-  const pwStrengthFill = container.querySelector('#pw-strength-fill');
-  const pwStrengthText = container.querySelector('#pw-strength-text');
-  const pwConfirmError = container.querySelector('#pw-confirm-error');
   const btnChangePw = container.querySelector('#btn-change-password');
 
-  function getPasswordStrength(pw) {
-    if (!pw) return { score: 0, label: '', color: '' };
-    let score = 0;
-    if (pw.length >= 8) score++;
-    if (pw.length >= 12) score++;
-    if (/[a-z]/.test(pw)) score++;
-    if (/[A-Z]/.test(pw)) score++;
-    if (/[0-9]/.test(pw)) score++;
-    if (/[^a-zA-Z0-9]/.test(pw)) score++;
-
-    if (score <= 2) return { score, label: 'Yếu', color: 'var(--negative)' };
-    if (score <= 4) return { score, label: 'Trung bình', color: 'var(--warning)' };
-    return { score, label: 'Mạnh', color: 'var(--emerald-accent)' };
-  }
-
   function validatePasswordForm() {
-    const pw = pwNew?.value || '';
-    const confirm = pwConfirm?.value || '';
+    const currentVal = pwCurrent?.value || '';
+    const newPwVal = pwNew?.value || '';
+    const confirmVal = pwConfirm?.value || '';
 
-    if (pwStrengthEl && pwStrengthFill && pwStrengthText) {
-      if (pw) {
-        const strength = getPasswordStrength(pw);
-        pwStrengthEl.style.display = 'flex';
-        pwStrengthFill.style.width = Math.max(10, (strength.score / 6) * 100) + '%';
-        pwStrengthFill.style.background = strength.color;
-        pwStrengthText.textContent = strength.label;
-        pwStrengthText.style.color = strength.color;
-      } else {
-        pwStrengthEl.style.display = 'none';
-      }
-    }
+    const strength = updatePasswordStrengthUI(container, newPwVal, 'pw-strength');
 
-    if (pwConfirmError) {
-      if (confirm && pw && confirm !== pw) {
-        pwConfirmError.style.display = 'block';
-        pwConfirmError.textContent = 'Mật khẩu xác nhận không khớp.';
-        pwConfirm.classList.add('is-invalid');
-      } else if (confirm && pw && confirm === pw) {
-        pwConfirmError.style.display = 'none';
-        pwConfirm.classList.remove('is-invalid');
-      } else {
-        pwConfirmError.style.display = 'none';
-        pwConfirm.classList.remove('is-invalid');
-      }
+    if (confirmVal && newPwVal && confirmVal !== newPwVal) {
+      setFieldError(container, 's-pw-confirm', t('settings.security.mismatchError', 'Mật khẩu xác nhận không khớp.'));
+    } else {
+      setFieldError(container, 's-pw-confirm', '');
     }
 
     if (btnChangePw) {
-      const currentPw = container.querySelector('#s-pw-current')?.value || '';
-      btnChangePw.disabled = !(currentPw && pw && confirm && pw === confirm);
+      const isCurrentFilled = currentVal.trim().length > 0;
+      const isStrengthValid = strength.isValid; // Meets all 4 rules
+      const isConfirmMatched = confirmVal.length > 0 && confirmVal === newPwVal;
+      btnChangePw.disabled = !(isCurrentFilled && isStrengthValid && isConfirmMatched);
     }
   }
 
+  if (pwCurrent) pwCurrent.addEventListener('input', validatePasswordForm);
   if (pwNew) pwNew.addEventListener('input', validatePasswordForm);
   if (pwConfirm) pwConfirm.addEventListener('input', validatePasswordForm);
-  container.querySelector('#s-pw-current')?.addEventListener('input', validatePasswordForm);
   validatePasswordForm();
 }
 

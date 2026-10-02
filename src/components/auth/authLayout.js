@@ -51,33 +51,8 @@ export function renderAuthPage(title, subtitle, formHTML) {
   `;
 }
 
-/**
- * Render a password field with visibility toggle.
- * @param {string} id
- * @param {string} label
- * @param {string} placeholder
- * @param {string} [name=id]
- * @param {string} [error='']
- * @returns {string}
- */
-export function renderPasswordField(id, label, placeholder, name = id, error = '') {
-  const errorHtml = error
-    ? `<span class="form-error">${error}</span>`
-    : '';
-
-  return `
-    <div class="form-group">
-      <label class="form-label" for="${id}">${label}</label>
-      <div class="password-input-wrapper">
-        <input type="password" id="${id}" name="${name}" class="form-input password-input" placeholder="${placeholder}" autocomplete="new-password" />
-        <button type="button" class="password-toggle" aria-label="${error ? '' : 'Hiện/ẩn mật khẩu'}" tabindex="-1">
-          <span class="password-toggle-icon" aria-hidden="true">👁️</span>
-        </button>
-      </div>
-      ${errorHtml}
-    </div>
-  `;
-}
+import { renderPasswordField } from '../ui/PasswordField.js';
+export { renderPasswordField };
 
 /**
  * Render a standard text/email input with error.

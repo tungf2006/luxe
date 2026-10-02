@@ -22,6 +22,7 @@ import {
 } from '../../services/authService.js';
 import { navigateTo } from '../../router.js';
 import { t } from '../../utils/i18n.js';
+import { initPasswordToggles } from '../../components/ui/PasswordField.js';
 
 /* ---------------------------------------------------------------- *
  * Validation helpers
@@ -104,6 +105,7 @@ function loginHTML() {
 }
 
 function attachLoginEvents(container) {
+  initPasswordToggles(container);
   const form = container.querySelector('#login-form');
   const submitBtn = container.querySelector('#login-submit');
   const errorEl = container.querySelector('#login-error');
@@ -217,6 +219,7 @@ function registerHTML() {
 }
 
 function attachRegisterEvents(container) {
+  initPasswordToggles(container);
   const form = container.querySelector('#register-form');
   const submitBtn = container.querySelector('#register-submit');
   const errorEl = container.querySelector('#register-error');
@@ -455,6 +458,7 @@ function resetPasswordHTML() {
 }
 
 function attachResetPasswordEvents(container) {
+  initPasswordToggles(container);
   const form = container.querySelector('#reset-form');
   const submitBtn = container.querySelector('#reset-submit');
   const errorEl = container.querySelector('#reset-error');

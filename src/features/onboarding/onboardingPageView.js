@@ -12,7 +12,8 @@ import { getCurrentUser, getProfile } from '../../services/authService.js';
 let _container = null;
 let _state = {};
 
-function render(currentStep) {
+function _renderStep(currentStep) {
+  if (!_container) return;
   _state._step = currentStep;
   _container.innerHTML = onboardingHTML(_state);
   attachStepEvents();
@@ -26,7 +27,7 @@ function attachStepEvents() {
   const backBtn = _container.querySelector('#onboarding-back');
   if (backBtn) {
     backBtn.onclick = () => {
-      if (step > 0) render(step - 1);
+      if (step > 0) _renderStep(step - 1);
     };
   }
 
@@ -41,7 +42,8 @@ function attachStepEvents() {
 
   /* ---- Next / Complete button ---- */
   const nextBtn = _container.querySelector('#onboarding-next');
-  const nextBtnText = nextBtn.querySelector('.btn-text');
+  if (!nextBtn) return;
+  const nextBtnText = nextBtn.querySelector('.btn-text') || nextBtn;
 
   if (step === maxStep) {
     nextBtnText.textContent = 'Hoàn thành';
@@ -53,12 +55,13 @@ function attachStepEvents() {
     nextBtnText.textContent = 'Tiếp theo';
     nextBtn.onclick = () => {
       saveStep(step);
-      render(step + 1);
+      _renderStep(step + 1);
     };
   }
 }
 
 function saveStep(step) {
+  if (!_container) return;
   if (step === 0) {
     _state.fullName = _container.querySelector('#onboarding-name')?.value || '';
     const termsChecked = _container.querySelector('#onboarding-onboarding-complete')?.checked || false;
@@ -83,12 +86,14 @@ function saveStep(step) {
 async function submitOnboarding() {
   const user = getCurrentUser();
   if (!user?.id) {
-    _container.innerHTML = '<p class="auth-subtitle">Vui lòng đăng nhập lại.</p>';
+    if (_container) {
+      _container.innerHTML = '<p class="auth-subtitle">Vui lòng đăng nhập lại.</p>';
+    }
     return;
   }
 
   const { errors } = await completeOnboarding(user.id, _state);
-  if (errors.length > 0) {
+  if (errors && errors.length > 0) {
     console.error('[onboarding] Errors:', errors);
   }
 
@@ -97,7 +102,11 @@ async function submitOnboarding() {
   window.location.reload();
 }
 
-export async function renderOnboarding(container) {
+/**
+ * Standard router renderer contract: render(container)
+ * @param {HTMLElement} container
+ */
+export async function render(container) {
   _container = container;
   _state = {};
 
@@ -109,11 +118,16 @@ export async function renderOnboarding(container) {
   const user = getCurrentUser();
   if (user?.id) {
     const { profile } = await getProfile();
-    if (profile?.full_name) _state.fullName = profile.full_name;
+    const name = profile?.display_name || profile?.full_name || user.user_metadata?.display_name || user.user_metadata?.full_name || '';
+    if (name) _state.fullName = name;
     if (profile?.currency) _state.currency = profile.currency;
     if (profile?.payday) _state.payDay = profile.payday;
     if (profile?.budget_period) _state.budgetPeriod = profile.budget_period;
   }
 
-  render(0);
+  _renderStep(0);
+}
+
+export async function renderOnboarding(container) {
+  return render(container);
 }

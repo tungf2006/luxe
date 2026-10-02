@@ -65,6 +65,8 @@
       "passwordPlaceholder": "........",
       "submit": "Đăng nhập",
       "or": "Hoặc",
+      "orExplore": "Hoặc trải nghiệm ngay",
+      "guestMode": "Dùng thử với vai trò Khách (Offline Demo)",
       "google": "Tiếp tục với Google",
       "register": "Đăng ký ngay",
       "forgot": "Quên mật khẩu?",
@@ -197,8 +199,8 @@
   "dashboard": {
     "hero": {
       "tagline": "Danh mục sống động · {{date}}",
-      "headline": "Tiền của bạn,<br>được quản lý đẹp mắt.",
-      "subheadline": "Theo dõi chi tiêu, quản lý ngân sách và rèn luyện thói quen tài chính tốt."
+      "headline": "Quản lý tài chính tinh tế,<br>nâng tầm phong cách sống.",
+      "subheadline": "Theo dõi chi tiêu thông minh, tối ưu ngân sách và kiến tạo thói quen tài chính thịnh vượng."
     },
     "kpi": {
       "totalBalance": "Tổng số dư",
@@ -608,13 +610,24 @@
       "currentPlaceholder": "••••••••",
       "newPlaceholder": "Tối thiểu 8 ký tự",
       "confirmPlaceholder": "Nhập lại mật khẩu",
-      "twoFactor": "Xác thực hai yếu tố",
+      "strengthTitle": "Độ mạnh mật khẩu:",
+      "strengthWeak": "Yếu",
+      "strengthFair": "Trung bình",
+      "strengthGood": "Khá",
+      "strengthStrong": "Mạnh",
+      "reqLength": "Tối thiểu 8 ký tự",
+      "reqUpper": "Có chữ viết hoa (A-Z)",
+      "reqNumber": "Có chữ số (0-9)",
+      "reqSpecial": "Có ký tự đặc biệt (!@#$...)",
+      "mismatchError": "Mật khẩu xác nhận không khớp.",
+      "twoFactor": "Xác thực hai yếu tố (2FA)",
       "twoFactorDesc": "Yêu cầu mã xác nhận mỗi lần đăng nhập",
       "sessions": {
+        "title": "Phiên đăng nhập",
         "current": "Hiện tại",
         "ago1": "2 giờ trước",
         "revoke": "Thu hồi",
-        "revokeAll": "Thu hồi tất cả phiên khác"
+        "revokeAll": "Đăng xuất tất cả thiết bị khác"
       },
       "deleteAccount": "Xoá tài khoản",
       "deleteAccountDesc": "Xoá vĩnh viễn tài khoản và toàn bộ dữ liệu. Không thể hoàn tác.",
@@ -706,6 +719,8 @@
     "yesterday": "Hôm qua",
     "monthShort": "Tháng {{monthNum}}, {{year}}",
     "currency": "VND",
-    "others": "Khác"
+    "others": "Khác",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu"
   }
 }

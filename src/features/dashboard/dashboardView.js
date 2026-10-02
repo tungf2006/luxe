@@ -13,25 +13,23 @@ import dataService, {
 import { AreaChart } from '../../components/charts/AreaChart.js';
 import { kpiCardHTML } from '../../components/ui/KPICard.js';
 import { panelHeaderHTML } from '../../components/ui/PanelHeader.js';
-import { renderKpiSkeleton, renderTableSkeleton, renderChartSkeleton, renderEmptyState, renderErrorState } from '../../components/ui/UIStates.js';
+import { renderChartSkeleton, renderEmptyState } from '../../components/ui/UIStates.js';
 import {
   merchantCellHTML,
-  amountHTML,
 } from '../../components/ui/TransactionCells.js';
 import {
   formatCurrency,
   formatAmount,
-  formatPercent,
   formatCompactCurrency,
   escapeHtml,
   getTrend,
-  capitalize,
   formatDateShort,
   formatDateLong,
   formatMonthYear,
   formatRelative,
+  getLocalDateString,
 } from '../../utils/format.js';
-import { CATEGORIES, CATEGORY_ICONS, CATEGORY_MAP, getCategoryLabelVi, getCategoryIcon } from '../../constants/categories.js';
+import { CATEGORIES, getCategoryLabelVi, getCategoryIcon } from '../../constants/categories.js';
 import { emit } from '../../utils/eventBus.js';
 import { t } from '../../utils/i18n.js';
 import { getBudgetProgressClass, getBudgetProgressColor } from '../../utils/progress.js';
@@ -84,11 +82,11 @@ let _transactions = [];
  * Helpers
  * ---------------------------------------------------------------- */
 function nowFormatted() {
-  return formatDateLong(new Date().toISOString().slice(0, 10));
+  return formatDateLong(getLocalDateString(new Date()));
 }
 
 function todayShort() {
-  return formatDateShort(new Date().toISOString().slice(0, 10));
+  return formatDateShort(getLocalDateString(new Date()));
 }
 
 function localMonthKey(date, offsetMonths = 0) {
@@ -456,7 +454,7 @@ return `
     <div class="glass-panel" id="quick-stats-panel" style="padding:1.25rem">
       <div class="panel-header" style="margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border-subtle);">
       <span class="panel-title">${t('dashboard.monthlyOverview.title')}</span>
-          <span class="panel-subtitle">${formatMonthYear(new Date().toISOString().slice(0, 10))}</span>
+          <span class="panel-subtitle">${formatMonthYear(getLocalDateString(new Date()))}</span>
       </div>
       <div style="display:flex;flex-direction:column;gap:0.9rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:0.75rem;border-bottom:1px solid var(--border-subtle);">

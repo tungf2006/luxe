@@ -21,18 +21,19 @@ import { init as initTransactionForm } from './features/transactions/transaction
 import dataService, { useSupabase, useLocalStorage } from './services/dataAdapter.js';
 import { DEFAULT_PAGE } from './constants/navigation.js';
 import { injectNavMarkup } from './components/ui/navRenderer.js';
+import { showToast } from './components/ui/Toast.js';
 import {
   initAuth,
   isAuthenticated,
   getCurrentUser,
   isInitializing,
-  hasCompletedOnboarding,
-  getProfile,
 } from './services/authService.js';
 import { MOCK_MODE } from './config/env.js';
 import { on } from './utils/eventBus.js';
 import { setActiveCurrency } from './utils/format.js';
-import { initI18n } from './utils/i18n.js';
+import { initI18n, t } from './utils/i18n.js';
+
+import { initStorage } from './services/storage.js';
 
 /**
  * Attach click listeners to all [data-page] elements (sidebar links,
@@ -196,7 +197,8 @@ function updateUserHeader() {
 
   const nameEl = document.getElementById('user-name');
   if (nameEl) {
-    const displayName = user.user_metadata?.full_name ||
+    const displayName = user.user_metadata?.display_name ||
+                        user.user_metadata?.full_name ||
                         user.user_metadata?.name ||
                         user.email?.split('@')[0] ||
                         'Người dùng';
@@ -207,14 +209,14 @@ function updateUserHeader() {
   const avatarEl = document.getElementById('user-avatar');
   const fallback = document.getElementById('user-avatar-fallback');
   if (avatarEl && fallback) {
-    const avatarUrl = user.user_metadata?.avatar_url;
+    const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
     if (avatarUrl) {
       avatarEl.src = avatarUrl;
       avatarEl.style.display = 'block';
       fallback.style.display = 'none';
     } else {
       avatarEl.style.display = 'none';
-      const initials = (user.user_metadata?.full_name || user.email || 'UX')
+      const initials = (user.user_metadata?.display_name || user.user_metadata?.full_name || user.email || 'UX')
         .split(' ')
         .map(w => w[0])
         .join('')
@@ -230,6 +232,11 @@ function updateUserHeader() {
  * Main initialisation.
  */
 async function initApp() {
+  // Initialize IndexedDB storage layer (non-blocking, migrates localStorage → IDB)
+  initStorage().then(({ engine, migrated }) => {
+    if (migrated) console.info(`[Luxe] Storage migrated to ${engine}`);
+  }).catch(() => { /* localStorage fallback active */ });
+
   await initI18n();
   await applySavedTheme();
 
@@ -258,34 +265,33 @@ async function initApp() {
   await initAuth();
 
   if (isAuthenticated()) {
-    const { profile, error: profileError } = await getProfile();
+    // If returning from Google OAuth redirect, clean the callback hash/code from URL
+    const { cleanOAuthUrl, getRedirectRoute } = await import('./router.js');
+    const destination = getRedirectRoute() || DEFAULT_PAGE;
+    cleanOAuthUrl(destination);
 
-    if (profile && !profile.onboarding_complete && !localStorage.getItem('luxe-onboarding-complete')) {
-      navigateTo('onboarding');
-    } else {
-      if (window.__SUPABASE_USER_ID) {
-        useSupabase(window.__SUPABASE_USER_ID);
-      }
-      updateUserHeader();
-      navigateTo(DEFAULT_PAGE);
+    const user = getCurrentUser();
+    if (user?.id) {
+      useSupabase(user.id);
     }
+    updateUserHeader();
+    navigateTo(destination);
   } else {
     navigateTo('login');
   }
 
-  window.addEventListener('auth:signed_in', () => {
+  window.addEventListener('auth:signed_in', async () => {
     const user = getCurrentUser();
     if (user?.id) {
       window.__SUPABASE_USER_ID = user.id;
       useSupabase(user.id);
 
-      const needsOnboarding = !localStorage.getItem('luxe-onboarding-complete');
-      if (needsOnboarding) {
-        navigateTo('onboarding');
-      } else {
-        updateUserHeader();
-        navigateTo(DEFAULT_PAGE);
-      }
+      const { cleanOAuthUrl, getRedirectRoute } = await import('./router.js');
+      const destination = getRedirectRoute() || DEFAULT_PAGE;
+      cleanOAuthUrl(destination);
+
+      updateUserHeader();
+      navigateTo(destination);
     }
   });
 
@@ -295,6 +301,15 @@ async function initApp() {
     if (pageContainer) pageContainer.innerHTML = '';
     window.location.hash = '#login';
     window.location.reload();
+  });
+
+  // Offline-First Network Status Listeners
+  window.addEventListener('online', () => {
+    showToast('Đã kết nối Internet. Dữ liệu đang được đồng bộ.', 'success');
+  });
+
+  window.addEventListener('offline', () => {
+    showToast('Mất kết nối Internet. Luxe chuyển sang chế độ Offline-First.', 'warning');
   });
 }
 

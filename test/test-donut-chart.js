@@ -3,8 +3,8 @@
  * Run: node test-donut-chart.js
  */
 
-import { calculatePercentages, computeSegments, DonutChart } from './src/components/charts/DonutChart.js';
-import { parseNumber, formatCurrency } from './src/utils/format.js';
+import { calculatePercentages, computeSegments, DonutChart } from '../src/components/charts/DonutChart.js';
+import { parseNumber, formatCurrency } from '../src/utils/format.js';
 
 let totalTests = 0;
 let passedTests = 0;
@@ -118,6 +118,63 @@ console.log('\nTest Group 5: SVG Geometry & Center Label');
   assert(html.includes('letter-spacing="0.08em"'), 'HTML contains letter-spacing="0.08em"');
 }
 
+// 6. Test case: Slices < 3% grouped into "Khác" with subItems
+console.log('\nTest Group 6: Grouping Slices < 3% into "Khác"');
+{
+  const dataWithSmallSlices = [
+    { label: 'Ăn uống', value: 800000, color: '#F59E0B' },   // 80%
+    { label: 'Di chuyển', value: 150000, color: '#38BDF8' }, // 15%
+    { label: 'Cà phê', value: 20000, color: '#A78BDA' },     // 2% (< 3%)
+    { label: 'Bút viết', value: 10000, color: '#EC4899' },   // 1% (< 3%)
+    { label: 'Vé gửi xe', value: 20000, color: '#14B8A3' },  // 2% (< 3%)
+  ];
+  const percentages = calculatePercentages(dataWithSmallSlices);
+  assert(percentages.length === 3, 'Groups small items into 3 items total');
+  assertEqual(percentages[0].label, 'Ăn uống', 'First item is Ăn uống');
+  assertEqual(percentages[0].pct, 80, 'Ăn uống is 80%');
+  assertEqual(percentages[1].label, 'Di chuyển', 'Second item is Di chuyển');
+  assertEqual(percentages[1].pct, 15, 'Di chuyển is 15%');
+  assertEqual(percentages[2].label, 'Khác', 'Third item is Khác');
+  assertEqual(percentages[2].value, 50000, 'Khác value is sum of small items (50,000)');
+  assertEqual(percentages[2].pct, 5, 'Khác pct is 5%');
+  assert(Array.isArray(percentages[2].subItems), 'Khác contains subItems array');
+  assert(percentages[2].subItems.length === 3, 'Khác contains 3 grouped subItems');
+  assertEqual(percentages[2].subItems[0].label, 'Cà phê', 'First subItem is Cà phê');
+}
+
+// 7. Test case: Legend 2-line layout, formatted amounts, and accessibility
+console.log('\nTest Group 7: Legend 2-line Structure & Amounts');
+{
+  const testData = [
+    { label: 'Ăn uống & Nhà hàng', value: 1500000, color: '#F59E0B' },
+    { label: 'Nhà ở & Tiền thuê', value: 3500000, color: '#38BDF8' },
+  ];
+  const html = DonutChart({ data: testData, currency: 'VND' });
+  assert(html.includes('class="legend-info"'), 'HTML contains legend-info container');
+  assert(html.includes('class="legend-label"'), 'HTML contains legend-label');
+  assert(html.includes('class="legend-amount"'), 'HTML contains legend-amount');
+  assert(html.includes('class="legend-pct"'), 'HTML contains legend-pct');
+  assert(html.includes('1.500.000'), 'HTML contains formatted currency amount');
+  assert(html.includes('tabindex="0"'), 'Legend items have tabindex="0"');
+  assert(html.includes('role="listitem"'), 'Legend items have role="listitem"');
+}
+
+// 8. Test case: Keyboard accessibility & Tooltip element
+console.log('\nTest Group 8: Keyboard Accessibility & Tooltip');
+{
+  const testData = [
+    { label: 'Ăn uống', value: 100, color: '#F59E0B' },
+    { label: 'Di chuyển', value: 100, color: '#38BDF8' },
+  ];
+  const html = DonutChart({ data: testData, currency: 'VND' });
+  assert(html.includes('class="donut-segment"'), 'Contains donut segments');
+  assert(html.includes('role="button"'), 'Segments have role="button"');
+  assert(html.includes('aria-label="Ăn uống:'), 'Segments have descriptive aria-label');
+  assert(html.includes('class="donut-tooltip"'), 'Contains donut-tooltip container');
+  assert(html.includes('role="tooltip"'), 'Tooltip container has role="tooltip"');
+  assert(html.includes('data-default='), 'Center texts have data-default for dynamic restoration');
+}
+
 console.log('\n========================================');
 console.log(`📊 Result: ${passedTests}/${totalTests} tests passed.`);
 console.log('========================================\n');
@@ -125,3 +182,4 @@ console.log('========================================\n');
 if (passedTests !== totalTests) {
   process.exit(1);
 }
+

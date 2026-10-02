@@ -116,14 +116,79 @@ export function formatRelative(dateStr) {
   return relativeLabel(dateStr) || formatDateShort(dateStr);
 }
 
-/**
- * Format a date for a sticky group header in the transactions table.
- * Recent dates render as "Hôm nay · 18/09/2026"; older dates render as the long form.
- * @param {string} dateStr — ISO date (YYYY-MM-DD)
- * @returns {string}
- */
 export function formatDateGroupHeader(dateStr) {
   const rel = relativeLabel(dateStr);
   if (rel) return `${rel} · ${formatDateShort(dateStr)}`;
   return formatDateLong(dateStr);
 }
+
+/**
+ * Format a Date object as local ISO date string YYYY-MM-DD.
+ * Timezone-safe (does not use toISOString).
+ * @param {Date} [date=new Date()]
+ * @returns {string} e.g. "2026-09-28"
+ */
+export function getLocalDateString(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Format a Date object as local ISO month string YYYY-MM.
+ * Timezone-safe.
+ * @param {Date} [date=new Date()]
+ * @returns {string} e.g. "2026-09"
+ */
+export function getLocalMonthString(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+/**
+ * Get Vietnamese weekday name (e.g. "Thứ Hai", "Chủ Nhật" or short "T2", "CN").
+ * @param {Date|string} date
+ * @param {boolean} [short=false]
+ * @returns {string}
+ */
+export function getDayNameVi(date, short = false) {
+  const d = typeof date === 'string' ? parseDate(date) : date;
+  if (isNaN(d)) return '';
+  const day = d.getDay(); // 0: CN, 1: T2, 2: T3, ...
+  if (short) {
+    const shortNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    return shortNames[day];
+  }
+  const longNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  return longNames[day];
+}
+
+/**
+ * Calculate local YYYY-MM-DD for N days ago.
+ * @param {number} n
+ * @param {Date} [baseDate=new Date()]
+ * @returns {string}
+ */
+export function daysAgoDateString(n, baseDate = new Date()) {
+  const d = new Date(baseDate);
+  d.setDate(d.getDate() - n);
+  return getLocalDateString(d);
+}
+
+/**
+ * Calculate local YYYY-MM-DD for N months ago.
+ * @param {number} n
+ * @param {number} [dayOfMonth=15]
+ * @param {Date} [baseDate=new Date()]
+ * @returns {string}
+ */
+export function monthsAgoDateString(n, dayOfMonth = 15, baseDate = new Date()) {
+  const d = new Date(baseDate.getFullYear(), baseDate.getMonth() - n, 1);
+  const maxDays = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const day = Math.min(dayOfMonth, maxDays);
+  d.setDate(day);
+  return getLocalDateString(d);
+}
+

@@ -16,7 +16,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(__dirname);
+const root = path.resolve(__dirname, '..');
 
 function findJsFiles(dir) {
   const files = [];
@@ -118,7 +118,7 @@ if (staticIssues.length > 0) {
 
 // 3. Runtime unit tests for t() helper in src/utils/i18n.js
 console.log('[i18n-test] Running runtime hardening tests on src/utils/i18n.js...');
-const { t, initI18n, setLocale } = await import('./src/utils/i18n.js');
+const { t, initI18n, setLocale } = await import('../src/utils/i18n.js');
 
 // Mock fetch for initI18n in node environment
 globalThis.fetch = async (url) => {

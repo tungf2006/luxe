@@ -1,18 +1,18 @@
 /**
- * @file SPA router — maps routes to feature render functions.
- * Listens for 'navigate' and 'data:changed' events from the event bus.
+ * @file SPA router — maps routes to feature render functions with Route Guard
+ * and OAuth callback hash resolution.
  *
- * Routes are split into:
- *   - App routes (dashboard, transactions, etc.) — require authentication
+ * Architecture:
+ *   - App routes (dashboard, transactions, etc.) — require authentication (meta.requiresAuth = true)
  *   - Auth routes (login, register, etc.) — public, shown when unauthenticated
- *   - Onboarding — shown once after first registration
- *
- * When on auth/onboarding/loading pages, the main app layout (sidebar + header)
- * is hidden. When on app pages, they are shown.
+ *   - Route Guard intercepts unauthenticated requests and redirects to `#/login?redirect=<target>`
+ *   - Google OAuth Hash Resolver intercepts `access_token` or `code` callback URLs,
+ *     preventing hash routing collisions and cleaning browser history.
  */
 
 import { on } from './utils/eventBus.js';
 import { DEFAULT_PAGE, getNavItem, getPageDocumentTitle } from './constants/navigation.js';
+import { isAuthenticated, isInitializing } from './services/authService.js';
 
 import * as dashboardView    from './features/dashboard/dashboardView.js';
 import * as transactionsView from './features/transactions/transactionsView.js';
@@ -24,6 +24,16 @@ import * as accountsView     from './features/accounts/accountsView.js';
 import * as settingsView     from './features/settings/settingsView.js';
 import * as authPageView     from './features/auth/authPageView.js';
 import * as onboardingView   from './features/onboarding/onboardingPageView.js';
+
+/** Public routes accessible without authentication */
+export const PUBLIC_ROUTES = new Set([
+  'login',
+  'register',
+  'forgot-password',
+  'verify-email',
+  'reset-password',
+  'loading',
+]);
 
 /** Pages that should hide the main app layout (sidebar + header). */
 const FULLSCREEN_PAGES = new Set([
@@ -38,21 +48,21 @@ const FULLSCREEN_PAGES = new Set([
 
 /** Registry: page name → feature module with a `render(container)` export. */
 const PAGE_RENDERERS = {
-  dashboard:     dashboardView,
-  transactions:  transactionsView,
-  budgets:       budgetsView,
-  reports:       reportsView,
-  goals:         goalsView,
-  recurring:     recurringView,
-  accounts:      accountsView,
-  settings:      settingsView,
-  login:         authPageView,
-  register:      authPageView,
+  dashboard:         dashboardView,
+  transactions:      transactionsView,
+  budgets:           budgetsView,
+  reports:           reportsView,
+  goals:             goalsView,
+  recurring:         recurringView,
+  accounts:          accountsView,
+  settings:          settingsView,
+  login:             authPageView,
+  register:          authPageView,
   'forgot-password': authPageView,
-  'verify-email': authPageView,
-  'reset-password': authPageView,
-  onboarding:    onboardingView,
-  loading:       authPageView,
+  'verify-email':    authPageView,
+  'reset-password':  authPageView,
+  onboarding:        onboardingView,
+  loading:           authPageView,
 };
 
 let currentPage = null;
@@ -178,12 +188,122 @@ function closeMobileOverlays() {
   if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
 }
 
+/* ---------------------------------------------------------------- *
+ * Route Guard & OAuth Resolver Helpers
+ * ---------------------------------------------------------------- */
+
 /**
- * Navigate to a page by name.
+ * Check if a page route requires authentication.
  * @param {string} page
+ * @returns {boolean}
  */
-export function navigateTo(page) {
-  if (!PAGE_RENDERERS[page]) return;
+export function requiresAuth(page) {
+  return !PUBLIC_ROUTES.has(page);
+}
+
+/**
+ * Extract redirect query parameter from current hash (e.g. `#/login?redirect=transactions`)
+ * @returns {string|null}
+ */
+export function getRedirectRoute() {
+  const hash = window.location.hash || '';
+  const match = hash.match(/[?&]redirect=([^&]+)/);
+  if (match && match[1]) {
+    const decoded = decodeURIComponent(match[1]);
+    if (PAGE_RENDERERS[decoded] && !PUBLIC_ROUTES.has(decoded)) {
+      return decoded;
+    }
+  }
+  return null;
+}
+
+/**
+ * Inspect URL for Google OAuth or recovery callbacks:
+ * - Implicit flow hash: `#access_token=...&refresh_token=...`
+ * - PKCE code query: `?code=...`
+ * - Error description: `#error=access_denied...`
+ * @returns {{ isCallback: boolean, error: string|null }}
+ */
+export function checkOAuthCallback() {
+  const hash = window.location.hash || '';
+  const search = window.location.search || '';
+
+  const hasAccessToken = hash.includes('access_token=') || hash.includes('refresh_token=');
+  const hasError = hash.includes('error=') || hash.includes('error_description=');
+  const hasCode = search.includes('code=');
+
+  if (hasError) {
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const errorDesc = params.get('error_description') || params.get('error') || 'Đăng nhập Google thất bại.';
+    console.warn('[router] OAuth callback error detected:', errorDesc);
+    window.history.replaceState({}, document.title, window.location.pathname + '#login');
+    return { isCallback: true, error: errorDesc };
+  }
+
+  if (hasAccessToken || hasCode) {
+    return { isCallback: true, error: null };
+  }
+
+  return { isCallback: false, error: null };
+}
+
+/**
+ * Clean OAuth callback tokens and codes from the browser URL, restoring clean hash.
+ * @param {string} [destinationPage='dashboard']
+ */
+export function cleanOAuthUrl(destinationPage = DEFAULT_PAGE) {
+  const targetHash = `#${destinationPage}`;
+  window.history.replaceState(
+    { page: destinationPage },
+    getPageDocumentTitle(destinationPage),
+    window.location.pathname + targetHash
+  );
+}
+
+/* ---------------------------------------------------------------- *
+ * Navigation Core
+ * ---------------------------------------------------------------- */
+
+/**
+ * Navigate to a page with Route Guard middleware.
+ * @param {string} page - Target page name
+ * @param {object} [options]
+ * @param {boolean} [options.replace=false] - Whether to replace history state
+ */
+export function navigateTo(page, options = {}) {
+  // If target page doesn't exist in registry, fallback
+  if (!PAGE_RENDERERS[page]) {
+    page = isAuthenticated() ? DEFAULT_PAGE : 'login';
+  }
+
+  // 1. ROUTE GUARD: Check if page requires authentication
+  if (!isInitializing()) {
+    if (requiresAuth(page) && !isAuthenticated()) {
+      // User is unauthenticated attempting to access protected route
+      // Redirect to login preserving the target route
+      console.info(`[router] Route Guard: Access to "${page}" redirected to login.`);
+      const redirectParam = encodeURIComponent(page);
+      currentPage = 'login';
+      updateLayoutVisibility('login');
+      closeMobileOverlays();
+      updateNavActiveState('login');
+
+      const targetHash = `#/login?redirect=${redirectParam}`;
+      if (options.replace) {
+        window.history.replaceState({ page: 'login', redirect: page }, '', targetHash);
+      } else {
+        window.history.pushState({ page: 'login', redirect: page }, '', targetHash);
+      }
+
+      const renderer = PAGE_RENDERERS.login;
+      const authContent = document.getElementById('auth-content');
+      if (renderer?.render && authContent) {
+        renderer.render(authContent, 'login');
+      }
+      return;
+    }
+  }
+
   currentPage = page;
 
   updateLayoutVisibility(page);
@@ -191,12 +311,21 @@ export function navigateTo(page) {
   updateNavActiveState(page);
 
   const renderer = PAGE_RENDERERS[page];
-  if (renderer.render && _pageContainer) {
-    const isAppPage = !FULLSCREEN_PAGES.has(page);
+  if (renderer?.render && _pageContainer) {
+    const isFullscreen = FULLSCREEN_PAGES.has(page);
+    const authContent = document.getElementById('auth-content');
+    const targetContainer = (isFullscreen && authContent) ? authContent : _pageContainer;
+
+    if (!isFullscreen && authContent) {
+      authContent.innerHTML = '';
+    }
+
+    const isAppPage = !isFullscreen;
     if (isAppPage && _pageContainer.innerHTML.trim() === '') {
       _pageContainer.innerHTML = '<div class="container">' + skeletonHTML() + '</div>';
     }
-    Promise.resolve(renderer.render(_pageContainer, page))
+
+    Promise.resolve(renderer.render(targetContainer, page))
       .then(() => { if (isAppPage) wrapPageContent(_pageContainer); })
       .catch(err => {
         console.error(`[router] render error for "${page}":`, err);
@@ -210,8 +339,13 @@ export function navigateTo(page) {
       });
   }
 
-  if (window.location.hash !== `#${page}`) {
-    window.history.pushState({ page }, '', `#${page}`);
+  const expectedHash = `#${page}`;
+  if (window.location.hash !== expectedHash && !window.location.hash.startsWith(`#${page}?`)) {
+    if (options.replace) {
+      window.history.replaceState({ page }, '', expectedHash);
+    } else {
+      window.history.pushState({ page }, '', expectedHash);
+    }
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -229,12 +363,14 @@ export function refreshCurrentPage() {
 }
 
 /**
- * Check if the current page requires authentication.
- * @param {string} page
- * @returns {boolean}
+ * Parse page name from current hash (handling query params like `#/login?redirect=...`).
+ * @returns {string}
  */
-export function requiresAuth(page) {
-  return !FULLSCREEN_PAGES.has(page);
+export function getPageFromHash() {
+  const raw = window.location.hash || '';
+  const clean = raw.replace(/^#\/?/, '');
+  const [pagePart] = clean.split('?');
+  return pagePart.trim();
 }
 
 /**
@@ -251,12 +387,22 @@ export function initRouter(pageContainer) {
 
   on('data:changed', refreshCurrentPage);
 
-  window.addEventListener('popstate', e => {
-    const target = e.state?.page;
-    if (target && PAGE_RENDERERS[target]) {
-      navigateTo(target);
+  // Sync hash changes (both browser back/forward and programmatic changes)
+  const handleHashOrPopState = () => {
+    const oauthStatus = checkOAuthCallback();
+    if (oauthStatus.isCallback) {
+      // Supabase is exchanging tokens in background — hold on loading page
+      return;
     }
-  });
+
+    const page = getPageFromHash();
+    if (page && PAGE_RENDERERS[page]) {
+      navigateTo(page, { replace: true });
+    }
+  };
+
+  window.addEventListener('popstate', handleHashOrPopState);
+  window.addEventListener('hashchange', handleHashOrPopState);
 }
 
 export function getCurrentPage() {

@@ -1,4 +1,4 @@
-import { on, emit } from './eventBus.js';
+import { emit } from './eventBus.js';
 
 let _currentLocale = 'vi';
 let _translations = { vi: {}, en: {} };

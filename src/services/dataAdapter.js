@@ -1,13 +1,17 @@
 /**
- * @file DataAdapter — facade that switches between localStorage (mock)
- * and Supabase backends at runtime.
+ * @file DataAdapter — facade that switches between localStorage/IndexedDB (mock/guest)
+ * and Supabase PostgREST backends at runtime.
  *
  * Feature modules should import from this module instead of dataService.js
  * directly. The adapter transparently delegates calls to the appropriate
  * backend based on the current auth state.
  *
+ * Reactive Event Integration:
+ *   - Listens for 'USER_LOGGED_IN' on eventBus: switches active backend to Supabase PostgREST
+ *   - Listens for 'USER_LOGGED_OUT' on eventBus: resets active backend to Guest/Offline storage
+ *
  * Data flow:
- *   UI → Feature → DataAdapter → (dataService | supabaseService) → (localStorage | Supabase)
+ *   UI → Feature → DataAdapter → (dataService | supabaseService) → (IndexedDB/localStorage | Supabase Cloud)
  *
  * Compute helpers (computeTotals, generateInsight, etc.) are re-exported
  * from dataService.js since they are pure functions with no backend dependency.
@@ -16,6 +20,7 @@
 import dataService from './dataService.js';
 import supabaseDataService from './supabaseService.js';
 import { HAS_SUPABASE, MOCK_MODE } from '../config/env.js';
+import { on } from '../utils/eventBus.js';
 
 /* ---------------------------------------------------------------- *
  * Backend state
@@ -33,15 +38,19 @@ export function useSupabase(userId) {
   _useSupabase = !!HAS_SUPABASE && !!userId && !MOCK_MODE;
   if (_useSupabase) {
     supabaseDataService.setUserId(userId);
+    console.info('[dataAdapter] Switched active backend to Supabase Cloud for user:', userId);
+  } else {
+    console.info('[dataAdapter] Mock/Offline mode active. Using local client storage.');
   }
 }
 
 /**
- * Reset to localStorage mock mode (called on sign-out).
+ * Reset to localStorage / IndexedDB mock mode (called on sign-out).
  */
 export function useLocalStorage() {
   _useSupabase = false;
   _userId = null;
+  console.info('[dataAdapter] Switched active backend to Local Storage (Guest mode).');
 }
 
 /**
@@ -51,6 +60,20 @@ export function useLocalStorage() {
 export function isUsingSupabase() {
   return _useSupabase;
 }
+
+/* ---------------------------------------------------------------- *
+ * Reactive EventBus Listeners
+ * ---------------------------------------------------------------- */
+on('USER_LOGGED_IN', (e) => {
+  const user = e?.detail?.user || e?.detail?.session?.user;
+  if (user?.id) {
+    useSupabase(user.id);
+  }
+});
+
+on('USER_LOGGED_OUT', () => {
+  useLocalStorage();
+});
 
 /* ---------------------------------------------------------------- *
  * Re-export pure compute functions (no backend needed)
@@ -75,14 +98,13 @@ function _getActiveService() {
 
 const dataAdapter = new Proxy(dataService, {
   get(target, prop) {
-    if (typeof target[prop] === 'function') {
-      const active = _getActiveService();
-      const value = active[prop];
-      return typeof value === 'function' ? value.bind(active) : value;
-    }
-    return target[prop];
+    const active = _getActiveService();
+    const value = active && active[prop] !== undefined ? active[prop] : target[prop];
+    return typeof value === 'function' ? value.bind(active) : value;
   },
   set(target, prop, value) {
+    const active = _getActiveService();
+    if (active) active[prop] = value;
     target[prop] = value;
     return true;
   },

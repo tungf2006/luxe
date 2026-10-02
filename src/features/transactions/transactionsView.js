@@ -7,7 +7,7 @@
 
 import dataService, { computeTotals } from '../../services/dataService.js';
 import { escapeHtml, formatAmount, formatCurrency, formatDateLong, formatDateGroupHeader, formatMonthYear } from '../../utils/format.js';
-import { CATEGORIES, CATEGORY_MAP, CATEGORY_ICONS, getCategoryLabelVi } from '../../constants/categories.js';
+import { CATEGORIES, CATEGORY_ICONS, getCategoryLabelVi } from '../../constants/categories.js';
 import { showToast, showToastWithAction } from '../../components/ui/Toast.js';
 import { statusBadgeHTML, merchantCellHTML, categoryTagHTML, actionDropdownHTML, paymentMethodHTML } from '../../components/ui/TransactionCells.js';
 import { showConfirmModal, showCategorySelectModal } from '../../components/ui/ConfirmModal.js';
@@ -138,7 +138,7 @@ function summaryCardsHTML() {
           <span class="kpi-icon-badge" aria-hidden="true">${summaryIcon(SUMMARY_ICONS.income)}</span>
         </div>
         <div class="kpi-value highlight-positive" id="tx-summary-income-value">${formatAmount(totals.income, 'income')}</div>
-        <div class="kpi-footer"><span class="trend-label">theo bộ lọc</span></div>
+        <div class="kpi-footer"><span class="trend-label" title="Chỉ tính các giao dịch đã hoàn thành">Đã hoàn thành · theo bộ lọc</span></div>
       </div>
       <div class="kpi-card" id="tx-summary-expense">
         <div class="kpi-header">
@@ -146,7 +146,7 @@ function summaryCardsHTML() {
           <span class="kpi-icon-badge" aria-hidden="true">${summaryIcon(SUMMARY_ICONS.expense)}</span>
         </div>
         <div class="kpi-value highlight-negative" id="tx-summary-expense-value">${formatAmount(totals.expenses, 'expense')}</div>
-        <div class="kpi-footer"><span class="trend-label">theo bộ lọc</span></div>
+        <div class="kpi-footer"><span class="trend-label" title="Chỉ tính các giao dịch đã hoàn thành">Đã hoàn thành · theo bộ lọc</span></div>
       </div>
       <div class="kpi-card" id="tx-summary-net">
         <div class="kpi-header">
@@ -154,7 +154,7 @@ function summaryCardsHTML() {
           <span class="kpi-icon-badge" aria-hidden="true">${summaryIcon(SUMMARY_ICONS.net)}</span>
         </div>
         <div class="kpi-value ${netClass}" id="tx-summary-net-value">${formatAmount(totals.net, totals.net >= 0 ? 'income' : 'expense')}</div>
-        <div class="kpi-footer"><span class="trend-label">thu – chi</span></div>
+        <div class="kpi-footer"><span class="trend-label">thu – chi hoàn thành</span></div>
       </div>
     </div>
   `;
@@ -179,15 +179,62 @@ function monthOptionsHTML(transactions) {
     .sort().reverse();
   return '<option value="">Tất cả tháng</option>' +
     months.map(m => {
-      const d = new Date(m + '-01');
-      const label = formatMonthYear(d.toISOString().slice(0, 10));
+      const label = formatMonthYear(m);
       return `<option value="${m}" ${txFilters.month === m ? 'selected' : ''}>${label}</option>`;
     }).join('');
 }
 
+function statusChipsHTML() {
+  // Compute counts for status quick-filter chips based on current search/category/month
+  const baseList = _transactions.filter(tx => {
+    const search = txFilters.search.toLowerCase();
+    const matchSearch = !search ||
+      tx.merchant.toLowerCase().includes(search) ||
+      tx.category.toLowerCase().includes(search);
+    const matchType = !txFilters.type || tx.type === txFilters.type;
+    const matchCat = !txFilters.category || tx.category === txFilters.category;
+    const matchMonth = !txFilters.month || tx.date.startsWith(txFilters.month);
+    const matchPayment = !txFilters.payment_method || tx.payment_method === txFilters.payment_method;
+    return matchSearch && matchType && matchCat && matchMonth && matchPayment;
+  });
+
+  const totalCount = baseList.length;
+  const pendingCount = baseList.filter(t => t.status === 'pending').length;
+  const failedCount = baseList.filter(t => t.status === 'failed').length;
+  const cancelledCount = baseList.filter(t => t.status === 'cancelled').length;
+
+  const currentStatus = txFilters.status;
+
+  return `
+    <div class="tx-status-chips" id="tx-status-chips" role="group" aria-label="Lọc nhanh trạng thái">
+      <button type="button" class="status-chip ${!currentStatus ? 'active' : ''}" data-status="" aria-pressed="${!currentStatus}">
+        Tất cả (${totalCount})
+      </button>
+      ${pendingCount > 0 ? `
+        <button type="button" class="status-chip status-chip-pending ${currentStatus === 'pending' ? 'active' : ''}" data-status="pending" aria-pressed="${currentStatus === 'pending'}">
+          <span class="status-pulse-dot" aria-hidden="true"></span>
+          Đang chờ (${pendingCount})
+        </button>
+      ` : ''}
+      ${failedCount > 0 ? `
+        <button type="button" class="status-chip status-chip-failed ${currentStatus === 'failed' ? 'active' : ''}" data-status="failed" aria-pressed="${currentStatus === 'failed'}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+          Thất bại (${failedCount})
+        </button>
+      ` : ''}
+      ${cancelledCount > 0 ? `
+        <button type="button" class="status-chip status-chip-cancelled ${currentStatus === 'cancelled' ? 'active' : ''}" data-status="cancelled" aria-pressed="${currentStatus === 'cancelled'}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+          Đã huỷ (${cancelledCount})
+        </button>
+      ` : ''}
+    </div>
+  `;
+}
+
 function filterBarHTML() {
   return `
-    <div class="tx-filter-bar" style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+    <div class="tx-filter-bar" style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
       <div class="search-input-box" role="search" style="flex:1;min-width:200px;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input type="search" id="tx-search" value="${escapeHtml(txFilters.search)}" placeholder="Tìm kiếm giao dịch…" aria-label="Tìm kiếm giao dịch" />
@@ -219,6 +266,7 @@ function filterBarHTML() {
         ${monthOptionsHTML(_transactions)}
       </select>
     </div>
+    ${statusChipsHTML()}
   `;
 }
 
@@ -239,7 +287,7 @@ function tableHTML() {
                 <input type="checkbox" id="tx-select-all" class="tx-select-all" title="Chọn tất cả trang này" />
               </th>
               <th scope="col" data-sort="merchant" aria-sort="${_sortField === 'merchant' ? (_sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}">
-                Người thu ${renderSortIndicator('merchant')}
+                Người thu / Người nhận ${renderSortIndicator('merchant')}
               </th>
               <th scope="col" data-sort="category" aria-sort="${_sortField === 'category' ? (_sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}">
                 Danh mục ${renderSortIndicator('category')}
@@ -249,9 +297,6 @@ function tableHTML() {
               </th>
               <th scope="col" data-sort="payment_method" aria-sort="${_sortField === 'payment_method' ? (_sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}">
                 Phương thức ${renderSortIndicator('payment_method')}
-              </th>
-              <th scope="col" data-sort="status" aria-sort="${_sortField === 'status' ? (_sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}">
-                Trạng thái ${renderSortIndicator('status')}
               </th>
               <th scope="col" style="text-align:right;" data-sort="amount" aria-sort="${_sortField === 'amount' ? (_sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}">
                 Số tiền ${renderSortIndicator('amount')}
@@ -319,6 +364,15 @@ function renderTableBody(container) {
   updateSummary(container);
   updateUrlParams();
 
+  // Refresh status chips UI
+  const chipsContainer = container.querySelector('#tx-status-chips');
+  if (chipsContainer) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = statusChipsHTML();
+    const newChips = tempDiv.firstElementChild;
+    if (newChips) chipsContainer.replaceWith(newChips);
+  }
+
   const filtered = getFilteredTx();
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / TX_PER_PAGE));
@@ -355,7 +409,7 @@ function renderTableBody(container) {
         const tooltip = formatDateLong(currentDate);
         rows.push(`
           <tr class="tx-date-header" data-date="${currentDate}">
-            <td colspan="8" class="tx-date-header-cell" title="${escapeHtml(tooltip)}">
+            <td colspan="7" class="tx-date-header-cell" title="${escapeHtml(tooltip)}">
               <span>${escapeHtml(headerText)}</span>
             </td>
           </tr>
@@ -363,8 +417,9 @@ function renderTableBody(container) {
       }
 
       const isSelected = selectedTxIds.has(tx.id);
+      const statusClass = `tx-row-${tx.status || 'completed'}`;
       rows.push(`
-        <tr id="tx-row-${tx.id}" class="${isSelected ? 'selected-row' : ''}">
+        <tr id="tx-row-${tx.id}" class="tx-row ${statusClass} ${isSelected ? 'selected-row' : ''}">
           <td style="text-align:center;">
             <input type="checkbox" class="tx-checkbox" data-id="${tx.id}" ${isSelected ? 'checked' : ''} />
           </td>
@@ -372,12 +427,11 @@ function renderTableBody(container) {
           <td>${categoryTagHTML(tx.category)}</td>
           <td style="color:var(--text-secondary);font-size:0.85rem;">${tx.date}</td>
           <td>${paymentMethodHTML(tx.payment_method)}</td>
-          <td>${statusBadgeHTML(tx.status)}</td>
           <td class="table-amount ${tx.type === 'income' ? 'highlight-positive' : 'highlight-negative'}">
             ${formatAmount(tx.amount, tx.type)}
           </td>
           <td style="text-align:center;">
-            ${actionDropdownHTML(tx.id, 'tx')}
+            ${actionDropdownHTML(tx.id, 'tx', tx.status)}
           </td>
         </tr>
       `);
@@ -391,15 +445,20 @@ function renderTableBody(container) {
         const isSelected = selectedTxIds.has(tx.id);
         const icon = CATEGORY_ICONS[tx.category] || '📦';
         const amountClass = tx.type === 'income' ? 'highlight-positive' : 'highlight-negative';
+        const statusBadge = statusBadgeHTML(tx.status);
+        const statusClass = `tx-card-${tx.status || 'completed'}`;
         return `
-          <div class="tx-card ${isSelected ? 'selected' : ''}" id="tx-card-${tx.id}">
+          <div class="tx-card ${statusClass} ${isSelected ? 'selected' : ''}" id="tx-card-${tx.id}">
             <div class="tx-card-header">
-              <div style="display:flex;align-items:center;gap:0.6rem;">
+              <div style="display:flex;align-items:center;gap:0.6rem;flex:1;min-width:0;">
                 <input type="checkbox" class="tx-checkbox" data-id="${tx.id}" ${isSelected ? 'checked' : ''} />
                 <span style="font-size:1.2rem;" aria-hidden="true">${icon}</span>
-                <span class="tx-card-title">${escapeHtml(tx.merchant)}</span>
+                <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;min-width:0;">
+                  <span class="tx-card-title">${escapeHtml(tx.merchant)}</span>
+                  ${statusBadge}
+                </div>
               </div>
-              ${actionDropdownHTML(tx.id, 'tx')}
+              ${actionDropdownHTML(tx.id, 'tx', tx.status)}
             </div>
             <div class="tx-card-sub">
               ${categoryTagHTML(tx.category)}
@@ -409,7 +468,6 @@ function renderTableBody(container) {
             <div class="tx-card-footer">
               <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                 ${paymentMethodHTML(tx.payment_method)}
-                ${statusBadgeHTML(tx.status)}
               </div>
               <div class="tx-card-amount ${amountClass}">${formatAmount(tx.amount, tx.type)}</div>
             </div>
@@ -632,7 +690,19 @@ function attachListeners(container) {
     // Close dropdown menu
     menuItem.closest('.action-dropdown')?.classList.remove('show');
 
-    if (action === 'view-tx') {
+    if (action === 'retry-tx') {
+      await dataService.updateTransaction(id, { status: 'completed' });
+      _transactions = await dataService.getTransactions();
+      emit('data:changed');
+      renderTableBody(container);
+      showToast(`Đã thử lại thành công: Giao dịch "${tx.merchant}" đã chuyển sang Hoàn thành.`, 'success');
+    } else if (action === 'complete-tx') {
+      await dataService.updateTransaction(id, { status: 'completed' });
+      _transactions = await dataService.getTransactions();
+      emit('data:changed');
+      renderTableBody(container);
+      showToast(`Giao dịch "${tx.merchant}" đã được xác nhận Hoàn thành.`, 'success');
+    } else if (action === 'view-tx') {
       await showConfirmModal({
         title: `Chi tiết: ${tx.merchant}`,
         message: `Số tiền: ${formatCurrency(tx.amount)}\nLoại: ${tx.type === 'income' ? 'Thu nhập' : 'Chi phí'}\nDanh mục: ${getCategoryLabelVi(tx.category)}\nNgày: ${tx.date}\nPhương thức: ${tx.payment_method || '—'}\nTrạng thái: ${tx.status}`,
@@ -684,6 +754,18 @@ function attachListeners(container) {
         );
       }
     }
+  });
+
+  // Status quick filter chip click handler
+  container.addEventListener('click', e => {
+    const chip = e.target.closest('.status-chip');
+    if (!chip) return;
+    const newStatus = chip.dataset.status || '';
+    txFilters.status = newStatus;
+    const statusSelect = container.querySelector('#tx-filter-status');
+    if (statusSelect) statusSelect.value = newStatus;
+    txPage = 1;
+    renderTableBody(container);
   });
 
   // Floating Bulk Bar Actions

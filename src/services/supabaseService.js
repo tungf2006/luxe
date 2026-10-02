@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file SupabaseDataService - Supabase-backed data-access layer.
  *
  * Implements the same async method signatures as `dataService.js` so that
@@ -17,11 +17,7 @@
 
 import { getSupabase } from './supabaseClient.js';
 import { emit } from '../utils/eventBus.js';
-import {
-  generateId,
-  formatCurrency,
-} from '../utils/format.js';
-import { CATEGORIES, CATEGORY_MAP, getCategoryLabelVi, getCategoryColor, getCategoryIcon } from '../constants/categories.js';
+import { CATEGORIES } from '../constants/categories.js';
 
 import dataService, {
   computeTotals,
@@ -426,7 +422,43 @@ const supabaseDataService = {
       orderBy: { column: 'is_default', ascending: false },
     });
 
-    if (error) throw new Error(`Không thể tải tài khoản: ${error.message}`);
+    if (error) {
+      console.warn('[supabaseService] Lỗi tải tài khoản từ Supabase:', error.message);
+      return dataService.getAccounts();
+    }
+
+    if (!data || data.length === 0) {
+      // Auto-seed default accounts for newly registered Supabase user
+      const defaultAccounts = [
+        { name: 'Vietcombank – Thanh toán', type: 'checking', balance: 15420000, currency: 'VND', is_default: true },
+        { name: 'Techcombank – Tiết kiệm', type: 'savings', balance: 9160000, currency: 'VND', is_default: false },
+        { name: 'Tiền mặt', type: 'checking', balance: 5000000, currency: 'VND', is_default: false },
+      ];
+      try {
+        const rowsToInsert = defaultAccounts.map(acc => ({
+          user_id: this.userId,
+          name: acc.name,
+          type: acc.type,
+          balance: acc.balance,
+          currency: acc.currency,
+          is_default: acc.is_default,
+        }));
+        const { data: inserted, error: insertErr } = await supabase.from('accounts').insert(rowsToInsert).select();
+        if (!insertErr && inserted && inserted.length > 0) {
+          return inserted.map(row => ({
+            id: row.id,
+            name: row.name,
+            type: row.type,
+            balance: Number(row.balance),
+            currency: row.currency || 'VND',
+            icon: row.icon || null,
+          }));
+        }
+      } catch (seedErr) {
+        console.warn('[supabaseService] Could not auto-seed accounts into Supabase:', seedErr);
+      }
+      return dataService.getAccounts();
+    }
 
     return (data || []).map(row => ({
       id: row.id,

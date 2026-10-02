@@ -3,7 +3,18 @@
  * Zero-dependency helpers shared across all features.
  */
 
-import { formatDateShort, formatDateLong, formatMonthYear, formatRelative, formatDateGroupHeader } from './dateFormat.js';
+import {
+  formatDateShort,
+  formatDateLong,
+  formatMonthYear,
+  formatRelative,
+  formatDateGroupHeader,
+  getLocalDateString,
+  getLocalMonthString,
+  getDayNameVi,
+  daysAgoDateString,
+  monthsAgoDateString,
+} from './dateFormat.js';
 
 let _currencyCode = 'VND';
 
@@ -165,7 +176,56 @@ export function formatCompactNumber(amount) {
     const fixed = val.toFixed(1).replace(/.0$/, '');
     return sign + fixed.replace('.', ',') + 'K';
   }
-  return sign + abs.toString();
+  return sign + Math.round(abs).toString();
+}
+
+/**
+ * Format a large number in compact spelled-out text (e.g. "1,25 triệu VND" or "1.25 million USD").
+ * @param {number|string} amount
+ * @param {string} [currency]
+ * @returns {string}
+ */
+export function formatSpelledAmount(amount, currency) {
+  const cleanAmount = parseNumber(amount);
+  if (!cleanAmount || cleanAmount < 1000) return '';
+  const code = currency || _currencyCode;
+  const abs = Math.abs(cleanAmount);
+
+  if (code === 'VND') {
+    if (abs >= 1000000000) {
+      const val = abs / 1000000000;
+      const formatted = Number(val.toFixed(2)).toLocaleString('vi-VN');
+      return `≈ ${formatted} tỷ VND`;
+    }
+    if (abs >= 1000000) {
+      const val = abs / 1000000;
+      const formatted = Number(val.toFixed(2)).toLocaleString('vi-VN');
+      return `≈ ${formatted} triệu VND`;
+    }
+    if (abs >= 1000) {
+      const val = abs / 1000;
+      const formatted = Number(val.toFixed(2)).toLocaleString('vi-VN');
+      return `≈ ${formatted} nghìn VND`;
+    }
+  }
+
+  // USD and other currencies
+  if (abs >= 1000000000) {
+    const val = abs / 1000000000;
+    const formatted = Number(val.toFixed(2)).toLocaleString('en-US');
+    return `≈ ${formatted} billion ${code}`;
+  }
+  if (abs >= 1000000) {
+    const val = abs / 1000000;
+    const formatted = Number(val.toFixed(2)).toLocaleString('en-US');
+    return `≈ ${formatted} million ${code}`;
+  }
+  if (abs >= 1000) {
+    const val = abs / 1000;
+    const formatted = Number(val.toFixed(2)).toLocaleString('en-US');
+    return `≈ ${formatted} thousand ${code}`;
+  }
+  return '';
 }
 
 /**
@@ -187,11 +247,11 @@ export function formatPercent(value, addPp = false) {
 export function escapeHtml(str) {
   if (typeof str !== 'string') return '';
   return str
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
-    .replace(/'/g, '\'');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /**
@@ -245,4 +305,15 @@ export function formatDate(dateStr) {
 /**
  * Re-exports from dateFormat.js for backward compatibility and convenience.
  */
-export { formatDateShort, formatDateLong, formatMonthYear, formatRelative, formatDateGroupHeader };
+export {
+  formatDateShort,
+  formatDateLong,
+  formatMonthYear,
+  formatRelative,
+  formatDateGroupHeader,
+  getLocalDateString,
+  getLocalMonthString,
+  getDayNameVi,
+  daysAgoDateString,
+  monthsAgoDateString,
+};
