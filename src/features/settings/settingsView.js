@@ -21,6 +21,7 @@ import {
   updatePasswordStrengthUI,
   setFieldError,
 } from '../../components/ui/PasswordField.js';
+import { openResetBudgetsModal } from '../budgets/budgetResetModal.js';
 
 /* --------------------------------------------------------------- *
  * Constants
@@ -198,6 +199,12 @@ function financialPanelHTML(s) {
       ${sectionHeadHTML('Kỳ ngân sách')}
       ${rowHTML('Ngày bắt đầu kỳ', 'Ngày trong tháng kỳ ngân sách bắt đầu',
         selectHTML('s-budget-start', s.budgetStartDay || '1', BUDGET_START_DAYS, 'data-dirty="financial"'))}
+      ${rowHTML('Đặt lại ngân sách mặc định',
+        'Khôi phục tất cả hạn mức ngân sách về mức khuyến nghị hoặc theo quy tắc 50/30/20',
+        `<button type="button" class="btn-secondary" id="btn-settings-reset-budgets" data-action="settings-reset-budgets" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.45rem 0.85rem;border-radius:var(--radius-sm);font-weight:600;font-size:0.8rem;border:1px solid var(--border-card);background:var(--bg-surface-elevated);color:var(--text-secondary);cursor:pointer;">
+          ${icon('<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>', 14)}
+          <span>Đặt lại ngân sách</span>
+        </button>`)}
 
       ${sectionHeadHTML('Danh mục')}
       <div class="settings-cat-list">${catRows}</div>
@@ -238,6 +245,20 @@ function notificationsPanelHTML(s) {
       ${rowHTML('Đề xuất AI',
         'Mẹo tài chính cá nhân và phát hiện bất thường',
         toggleHTML('notif-ai', n.aiInsights !== false, 'Đề xuất AI'))}
+
+      ${sectionHeadHTML('Thử nghiệm & Quản lý')}
+      ${rowHTML('Gửi thông báo mẫu',
+        'Tạo ngay một thông báo thử nghiệm để kiểm tra chuông thông báo trên thanh điều hướng',
+        `<button type="button" class="btn-secondary" id="btn-send-test-notif" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.45rem 0.85rem;border-radius:var(--radius-sm);font-weight:600;font-size:0.8rem;border:1px solid var(--border-card);background:var(--bg-surface-elevated);color:var(--text-primary);cursor:pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span>Gửi thử nghiệm</span>
+        </button>`)}
+      ${rowHTML('Đặt lại thông báo mặc định',
+        'Khôi phục 5 thông báo tài chính mẫu ban đầu và đặt lại trạng thái chuông',
+        `<button type="button" class="btn-secondary" id="btn-reset-notif" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.45rem 0.85rem;border-radius:var(--radius-sm);font-weight:600;font-size:0.8rem;border:1px solid var(--border-card);background:var(--bg-surface-elevated);color:var(--text-secondary);cursor:pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+          <span>Khôi phục mẫu</span>
+        </button>`)}
     </div>`;
 }
 
@@ -248,9 +269,14 @@ function appearancePanelHTML(s) {
   const theme = s.theme || 'dark';
   const accent = s.accentColor || '#6366F1';
 
+  const THEME_ICONS = {
+    dark: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+    light: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+    system: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+  };
   const themeButtons = ['dark', 'light', 'system'].map(t => {
-    const labels = { dark: '🌙 Tối', light: '☀️ Sáng', system: '💻 Hệ thống' };
-    return `<button class="settings-theme-btn ${theme === t ? 'active' : ''}" data-theme="${t}" aria-pressed="${theme === t}">${labels[t]}</button>`;
+    const labels = { dark: 'Tối', light: 'Sáng', system: 'Hệ thống' };
+    return `<button class="settings-theme-btn ${theme === t ? 'active' : ''}" data-theme="${t}" aria-pressed="${theme === t}">${THEME_ICONS[t]} <span>${labels[t]}</span></button>`;
   }).join('');
 
   const accentSwatches = ACCENT_COLORS.map(c =>
@@ -409,7 +435,12 @@ export async function render(container, page = 'settings') {
 
   container.innerHTML = settingsShellHTML(user, s, route);
 
-  activateTab(container, 'panel-profile');
+  const urlHash = window.location.hash || '';
+  const urlTab = urlHash.includes('tab=notifications') ? 'notifications' : null;
+  const initialTab = window.__ACTIVE_SETTINGS_TAB || urlTab || 'profile';
+  window.__ACTIVE_SETTINGS_TAB = null;
+  activateTab(container, `panel-${initialTab}`);
+
   attachListeners(container, s);
 }
 
@@ -628,6 +659,33 @@ function attachListeners(container, settings) {
         showToast('Tài khoản đã bị xoá. Dữ liệu đã được đặt lại.', 'success');
       }
     }
+  }, sig);
+
+  /* ---- Notification Action Buttons in Settings ---- */
+  container.querySelector('#btn-send-test-notif')?.addEventListener('click', async () => {
+    await dataService.addNotification({
+      type: 'warning',
+      category: 'budget',
+      title: 'Cảnh báo ngân sách phát sinh',
+      message: 'Chi tiêu gần đây đã chạm 85% hạn mức cho phép của ngân sách Ăn uống.',
+      action_label: 'Kiểm tra ngân sách',
+      action_url: '#/budgets',
+    });
+    showToast('Đã gửi 1 thông báo thử nghiệm vào chuông!', 'success');
+  }, sig);
+
+  container.querySelector('#btn-reset-notif')?.addEventListener('click', async () => {
+    const { getDefaultNotifications } = await import('../../services/mockData.js');
+    const defaults = getDefaultNotifications();
+    await dataService.clearAllNotifications();
+    for (let i = defaults.length - 1; i >= 0; i--) {
+      await dataService.addNotification(defaults[i]);
+    }
+    showToast('Đã khôi phục 5 thông báo mẫu ban đầu', 'info');
+  }, sig);
+
+  container.querySelector('#btn-settings-reset-budgets')?.addEventListener('click', () => {
+    openResetBudgetsModal();
   }, sig);
 
   /* ---- Password visibility toggles ---- */

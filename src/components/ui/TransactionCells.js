@@ -6,8 +6,8 @@
  * Keeping these in `components/ui/` avoids duplicating markup across features.
  */
 
-import { CATEGORY_ICONS, CATEGORY_MAP, getCategoryIcon, getCategoryLabelVi, getCategoryColor } from '../../constants/categories.js';
-import { formatAmount, escapeHtml } from '../../utils/format.js';
+import { CATEGORY_ICONS, CATEGORY_MAP, getCategoryIcon, getCategoryLabelVi, getCategoryColor, getCategoryAvatarHtml } from '../../constants/categories.js';
+import { formatAmount, escapeHtml, getTransactionAmountClass, getTransactionType } from '../../utils/format.js';
 
 
 
@@ -85,12 +85,12 @@ export function statusBadgeHTML(status) {
  * @returns {string}
  */
 export function merchantCellHTML(tx, showSub = false) {
-  const icon = getCategoryIcon(tx.category) || CATEGORY_ICONS[tx.category] || '📦';
+  const avatar = getCategoryAvatarHtml(tx.category, 'sm');
   const subLabel = showSub ? getCategoryLabelVi(tx.category) || tx.category : '';
   const statusBadge = statusBadgeHTML(tx.status);
   return `
     <div class="merchant-cell">
-      <div class="merchant-icon" aria-hidden="true">${icon}</div>
+      <div class="merchant-icon" aria-hidden="true">${avatar}</div>
       <div class="merchant-details">
         <div class="merchant-name-line">
           <span class="merchant-name">${escapeHtml(tx.merchant)}</span>
@@ -102,6 +102,13 @@ export function merchantCellHTML(tx, showSub = false) {
   `;
 }
 
+const PAYMENT_METHOD_SVGS = {
+  cash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg>',
+  card: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
+  transfer: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="5 6 12 3 19 6"/><line x1="4" y1="10" x2="4" y2="21"/><line x1="20" y1="10" x2="20" y2="21"/></svg>',
+  ewallet: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+};
+
 /**
  * Render a payment method label (cash / card / transfer / ewallet).
  * @param {'cash'|'card'|'transfer'|'ewallet'} method
@@ -109,12 +116,12 @@ export function merchantCellHTML(tx, showSub = false) {
  */
 export function paymentMethodHTML(method) {
   const map = {
-    cash:     { label: 'Tiền mặt',     icon: '💵' },
-    card:     { label: 'Thẻ',          icon: '💳' },
-    transfer: { label: 'Chuyển khoản', icon: '🏦' },
-    ewallet:  { label: 'Ví điện tử',   icon: '📱' },
+    cash:     { label: 'Tiền mặt',     icon: PAYMENT_METHOD_SVGS.cash },
+    card:     { label: 'Thẻ',          icon: PAYMENT_METHOD_SVGS.card },
+    transfer: { label: 'Chuyển khoản', icon: PAYMENT_METHOD_SVGS.transfer },
+    ewallet:  { label: 'Ví điện tử',   icon: PAYMENT_METHOD_SVGS.ewallet },
   };
-  const info = map[method] || { label: method || '—', icon: '💳' };
+  const info = map[method] || { label: method || '—', icon: PAYMENT_METHOD_SVGS.card };
   return `
     <span style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.8rem;color:var(--text-secondary);">
       <span aria-hidden="true">${info.icon}</span>
@@ -200,8 +207,9 @@ export function statusToggleHTML(id, isActive) {
  * @returns {string}
  */
 export function amountHTML(tx) {
-  const cls = tx.type === 'income' ? 'highlight-positive' : 'highlight-negative';
-  return `<td class="table-amount ${cls}">${formatAmount(tx.amount, tx.type)}</td>`;
+  const cls = getTransactionAmountClass(tx);
+  const type = getTransactionType(tx);
+  return `<td class="table-amount ${cls}">${formatAmount(tx.amount, type)}</td>`;
 }
 
 /* ---- internal helpers ---- */

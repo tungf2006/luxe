@@ -4,16 +4,17 @@
  * daily allowed reference line, and month-end projection.
  */
 
-import dataService, { getBudgetProgress } from '../../services/dataService.js';
+import dataService, { getBudgetProgress } from '../../services/dataAdapter.js';
 import { kpiCardHTML } from '../../components/ui/KPICard.js';
 import { formatCurrency, formatCompactCurrency, escapeHtml, parseNumber, getLocalDateString, getDayNameVi, formatDateShort } from '../../utils/format.js';
 import { showToast } from '../../components/ui/Toast.js';
 import { emit } from '../../utils/eventBus.js';
-import { CATEGORY_MAP, getCategoryLabelVi, getCategoryIcon, getCategoryColor } from '../../constants/categories.js';
+import { CATEGORY_MAP, getCategoryLabelVi, getCategoryIcon, getCategoryColor, getCategoryAvatarHtml } from '../../constants/categories.js';
 import { pageHeaderHTML } from '../../components/ui/PageHeader.js';
 import { t } from '../../utils/i18n.js';
 import { getBudgetProgressClass, getBudgetProgressColor } from '../../utils/progress.js';
 import { getRoute } from '../../config/routes.js';
+import { openResetBudgetsModal, openEditBudgetModal, openAddBudgetModal } from './budgetResetModal.js';
 
 /* --------------------------------------------------------------- *
  * SVG icon fragments
@@ -29,6 +30,7 @@ const ICONS = {
   edit:        '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>',
   eye:         '<circle cx="12" cy="12" r="10"/><line x1="2" y1="2" x2="22" y2="22"></line>',
   trash:       '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>',
+  rotateCcw:   '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
   warningMini: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
 };
 
@@ -350,6 +352,9 @@ function budgetCardsHTML(budgets, txList = []) {
               <button class="budget-card-menu-item" data-action="edit-budget" data-budget-id="${b.id}" data-category="${b.category}" role="menuitem">
                 ${kpiIcon(ICONS.edit)} Sửa hạn mức
               </button>
+              <button class="budget-card-menu-item" data-action="reset-single-budget" data-budget-id="${b.id}" data-category="${b.category}" role="menuitem">
+                ${kpiIcon(ICONS.rotateCcw)} Đặt lại về mặc định
+              </button>
               <button class="budget-card-menu-item" data-action="view-budget-tx" data-budget-id="${b.id}" data-category="${b.category}" role="menuitem">
                 ${kpiIcon(ICONS.eye)} Xem giao dịch
               </button>
@@ -361,7 +366,8 @@ function budgetCardsHTML(budgets, txList = []) {
 
             <div class="budget-card-top">
               <span class="budget-card-title">
-                ${catIcon} ${escapeHtml(catName)}
+                ${getCategoryAvatarHtml(b.category, 'sm')}
+                <span class="budget-card-name">${escapeHtml(catName)}</span>
               </span>
               <span class="budget-status-pill ${fillClass}">${rawPct}% đã dùng</span>
             </div>
@@ -445,10 +451,16 @@ export async function render(container, page = 'budgets') {
       title: route.title,
       description: route.description,
       actionHTML: `
-        <button class="btn-add-transaction" data-action="add-budget" aria-label="Đặt ngân sách mới">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          Đặt ngân sách mới
-        </button>
+        <div class="page-header-actions" style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+          <button class="btn-secondary" id="btn-reset-budgets" data-action="reset-budgets" aria-label="Đặt lại ngân sách">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            Đặt lại ngân sách
+          </button>
+          <button class="btn-add-transaction" id="btn-add-budget" data-action="add-budget" aria-label="Đặt ngân sách mới">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Đặt ngân sách mới
+          </button>
+        </div>
       `,
     })}
     ${budgetSummaryKPIsHTML(progressBudgets)}
@@ -456,7 +468,7 @@ export async function render(container, page = 'budgets') {
     ${budgetCardsHTML(progressBudgets, transactions)}
   `;
 
-  attachListeners(container);
+  attachListeners(container, progressBudgets);
 }
 
 function budgetLegendHTML() {
@@ -501,7 +513,7 @@ let _docClickHandler = null;
 let _docKeydownHandler = null;
 let _containerClickHandler = null;
 
-function attachListeners(container) {
+function attachListeners(container, progressBudgets = []) {
   if (_docClickHandler) document.removeEventListener('click', _docClickHandler);
   if (_docKeydownHandler) document.removeEventListener('keydown', _docKeydownHandler);
   if (_containerClickHandler) container.removeEventListener('click', _containerClickHandler);
@@ -517,6 +529,14 @@ function attachListeners(container) {
   document.addEventListener('keydown', _docKeydownHandler);
 
   _containerClickHandler = e => {
+    // Reset all budgets button
+    const resetAllBtn = e.target.closest('[data-action="reset-budgets"]');
+    if (resetAllBtn) {
+      e.stopPropagation();
+      openResetBudgetsModal();
+      return;
+    }
+
     // Toggle dropdown
     const toggleBtn = e.target.closest('[data-action="toggle-budget-menu"]');
     if (toggleBtn) {
@@ -529,8 +549,30 @@ function attachListeners(container) {
     const editBtn = e.target.closest('[data-action="edit-budget"]');
     if (editBtn) {
       e.stopPropagation();
+      const budgetId = editBtn.dataset.budgetId;
       closeBudgetDropdowns(container);
-      showToast('Tính năng sửa hạn mức sẽ sớm được ra mắt.', 'info');
+      const b = progressBudgets.find(item => item.id === budgetId);
+      if (b) {
+        openEditBudgetModal(b);
+      }
+      return;
+    }
+
+    // Reset single budget to default
+    const resetSingleBtn = e.target.closest('[data-action="reset-single-budget"]');
+    if (resetSingleBtn) {
+      e.stopPropagation();
+      const budgetId = resetSingleBtn.dataset.budgetId;
+      closeBudgetDropdowns(container);
+      const b = progressBudgets.find(item => item.id === budgetId);
+      if (b) {
+        const catName = getCategoryLabelVi(b.category) || b.category;
+        dataService.resetSingleBudget(budgetId).then(() => {
+          showToast(`Đã đặt lại hạn mức ${catName} về mức mặc định.`, 'success');
+        }).catch(err => {
+          showToast(`Không thể đặt lại: ${err.message}`, 'error');
+        });
+      }
       return;
     }
 
@@ -560,7 +602,8 @@ function attachListeners(container) {
 
     // Set New Budget button
     if (e.target.closest('[data-action="add-budget"]')) {
-      showToast('Tính năng tạo ngân sách sẽ sớm được ra mắt.', 'info');
+      e.stopPropagation();
+      openAddBudgetModal();
     }
   };
   container.addEventListener('click', _containerClickHandler);

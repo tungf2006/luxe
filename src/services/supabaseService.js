@@ -19,7 +19,7 @@ import { getSupabase } from './supabaseClient.js';
 import { emit } from '../utils/eventBus.js';
 import { CATEGORIES } from '../constants/categories.js';
 
-import dataService, {
+import {
   computeTotals,
   getTotalBalance,
   computeSavingsRate,
@@ -28,6 +28,8 @@ import dataService, {
   getWeeklySeries,
   generateInsight,
 } from './dataService.js';
+import { load, save, STORAGE_KEYS } from './storage.js';
+import { DEFAULT_SETTINGS } from './mockData.js';
 
 export {
   computeTotals,
@@ -210,8 +212,8 @@ const supabaseDataService = {
   async getTransactions() {
     await this._ensureCategories();
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.getTransactions();
+    if (!supabase || !this.userId) {
+      return [];
     }
 
     const { data, error } = await _select(supabase, 'transactions', {
@@ -231,8 +233,8 @@ const supabaseDataService = {
 
   async addTransaction(tx) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.addTransaction(tx);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     const payload = await _uiTxToDb(tx, this.userId);
@@ -245,8 +247,8 @@ const supabaseDataService = {
 
   async deleteTransaction(id) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.deleteTransaction(id);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     const { error } = await supabase.from('transactions').delete().eq('id', id).eq('user_id', this.userId);
@@ -257,8 +259,8 @@ const supabaseDataService = {
 
   async updateTransaction(id, updates) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.updateTransaction(id, updates);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     await this._ensureCategories();
@@ -290,8 +292,8 @@ const supabaseDataService = {
   async getBudgets() {
     await this._ensureCategories();
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.getBudgets();
+    if (!supabase || !this.userId) {
+      return [];
     }
 
     const currentMonth = new Date().toISOString().slice(0, 7);
@@ -306,8 +308,8 @@ const supabaseDataService = {
 
   async addBudget(budget) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.addBudget(budget);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     const payload = await _uiBudgetToDb(budget, this.userId);
@@ -319,8 +321,8 @@ const supabaseDataService = {
 
   async updateBudget(id, updates) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.updateBudget(id, updates);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     const payload = {};
@@ -341,29 +343,71 @@ const supabaseDataService = {
     return _dbBudgetToUi(data);
   },
 
-  /* ---- Settings (stored on profile) ---- */
+  async deleteBudget(id) {
+    const supabase = getSupabase();
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
+    }
+    const { error } = await supabase.from('budgets').delete().eq('id', id).eq('user_id', this.userId);
+    if (error) throw new Error(`Không thể xóa ngân sách: ${error.message}`);
+    emit('data:changed');
+    return true;
+  },
+
+  async resetBudgets(options) {
+    const supabase = getSupabase();
+    if (!supabase || !this.userId) {
+      return [];
+    }
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    await supabase.from('budgets').delete().eq('user_id', this.userId).eq('month', currentMonth);
+    const defaultBudgets = [
+      { category: 'food', limit: 5000000 },
+      { category: 'transport', limit: 2000000 },
+      { category: 'shopping', limit: 3000000 },
+      { category: 'bills', limit: 4000000 },
+      { category: 'entertainment', limit: 1500000 },
+      { category: 'health', limit: 1500000 },
+    ];
+    for (const b of defaultBudgets) {
+      try {
+        const payload = await _uiBudgetToDb(b, this.userId);
+        await supabase.from('budgets').insert(payload);
+      } catch (e) {
+        console.warn('[supabaseService] Could not insert reset budget:', e);
+      }
+    }
+    emit('data:changed');
+    return this.getBudgets();
+  },
+
+  async resetSingleBudget(id) {
+    const supabase = getSupabase();
+    if (!supabase || !this.userId) {
+      return null;
+    }
+    return null;
+  },
+
+  /* ---- Settings (stored on profile + scoped storage) ---- */
   async getSettings() {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.getSettings();
+    let profile = null;
+    if (supabase && this.userId) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('currency, payday, budget_period')
+        .eq('id', this.userId)
+        .single();
+      profile = data;
     }
 
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('currency, payday, budget_period')
-      .eq('id', this.userId)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      console.warn('[supabaseService] Profile fetch warning:', error.message);
-    }
-
-    const localSettings = JSON.parse(localStorage.getItem('luxe_settings') || '{}');
+    const localSettings = load(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
     return {
       theme: localSettings.theme || 'dark',
-      currency: profile?.currency || 'VND',
-      payDay: profile?.payday || '1st',
-      budgetPeriod: profile?.budget_period || 'monthly',
+      currency: profile?.currency || localSettings.currency || 'VND',
+      payDay: profile?.payday || localSettings.payDay || '1st',
+      budgetPeriod: profile?.budget_period || localSettings.budgetPeriod || 'monthly',
       compactMode: localSettings.compactMode || false,
       animations: localSettings.animations !== false,
       notifications: localSettings.notifications || {
@@ -377,33 +421,25 @@ const supabaseDataService = {
 
   async updateSettings(updates) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.updateSettings(updates);
+    if (supabase && this.userId) {
+      const payload = {};
+      if (updates.currency) payload.currency = updates.currency;
+      if (updates.payDay) payload.payday = updates.payDay;
+      if (updates.budgetPeriod) payload.budget_period = updates.budgetPeriod;
+
+      if (Object.keys(payload).length > 0) {
+        const { error } = await supabase
+          .from('profiles')
+          .update(payload)
+          .eq('id', this.userId);
+
+        if (error) console.warn('[supabaseService] updateSettings profile warning:', error.message);
+      }
     }
 
-    const payload = {};
-    if (updates.currency) payload.currency = updates.currency;
-    if (updates.payDay) payload.payday = updates.payDay;
-    if (updates.budgetPeriod) payload.budget_period = updates.budgetPeriod;
-
-    if (Object.keys(payload).length > 0) {
-      const { error } = await supabase
-        .from('profiles')
-        .update(payload)
-        .eq('id', this.userId);
-
-      if (error) throw new Error(`Không thể cập nhật cài đặt: ${error.message}`);
-    }
-
-    const localUpdates = { ...updates };
-    delete localUpdates.currency;
-    delete localUpdates.payDay;
-    delete localUpdates.budgetPeriod;
-    if (Object.keys(localUpdates).length > 0) {
-      const existing = JSON.parse(localStorage.getItem('luxe_settings') || '{}');
-      Object.assign(existing, localUpdates);
-      localStorage.setItem('luxe_settings', JSON.stringify(existing));
-    }
+    const existing = load(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+    const merged = { ...existing, ...updates };
+    save(STORAGE_KEYS.SETTINGS, merged);
 
     emit('data:changed');
     return this.getSettings();
@@ -412,8 +448,8 @@ const supabaseDataService = {
   /* ---- Accounts ---- */
   async getAccounts() {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.getAccounts();
+    if (!supabase || !this.userId) {
+      return [];
     }
 
     const { data, error } = await _select(supabase, 'accounts', {
@@ -424,40 +460,40 @@ const supabaseDataService = {
 
     if (error) {
       console.warn('[supabaseService] Lỗi tải tài khoản từ Supabase:', error.message);
-      return dataService.getAccounts();
+      throw new Error(`Không thể tải tài khoản: ${error.message}`);
     }
 
     if (!data || data.length === 0) {
-      // Auto-seed default accounts for newly registered Supabase user
-      const defaultAccounts = [
-        { name: 'Vietcombank – Thanh toán', type: 'checking', balance: 15420000, currency: 'VND', is_default: true },
-        { name: 'Techcombank – Tiết kiệm', type: 'savings', balance: 9160000, currency: 'VND', is_default: false },
-        { name: 'Tiền mặt', type: 'checking', balance: 5000000, currency: 'VND', is_default: false },
-      ];
+      // Auto-bootstrap 1 default Cash account with 0 VND balance (user data, editable/deletable)
+      const defaultAccount = {
+        user_id: this.userId,
+        name: 'Tiền mặt',
+        type: 'checking',
+        balance: 0,
+        currency: 'VND',
+        is_default: true,
+      };
       try {
-        const rowsToInsert = defaultAccounts.map(acc => ({
-          user_id: this.userId,
-          name: acc.name,
-          type: acc.type,
-          balance: acc.balance,
-          currency: acc.currency,
-          is_default: acc.is_default,
-        }));
-        const { data: inserted, error: insertErr } = await supabase.from('accounts').insert(rowsToInsert).select();
-        if (!insertErr && inserted && inserted.length > 0) {
-          return inserted.map(row => ({
-            id: row.id,
-            name: row.name,
-            type: row.type,
-            balance: Number(row.balance),
-            currency: row.currency || 'VND',
-            icon: row.icon || null,
-          }));
+        const { data: inserted, error: insertErr } = await supabase
+          .from('accounts')
+          .insert(defaultAccount)
+          .select()
+          .single();
+
+        if (!insertErr && inserted) {
+          return [{
+            id: inserted.id,
+            name: inserted.name,
+            type: inserted.type,
+            balance: Number(inserted.balance),
+            currency: inserted.currency || 'VND',
+            icon: inserted.icon || null,
+          }];
         }
       } catch (seedErr) {
-        console.warn('[supabaseService] Could not auto-seed accounts into Supabase:', seedErr);
+        console.warn('[supabaseService] Could not auto-bootstrap cash account into Supabase:', seedErr);
       }
-      return dataService.getAccounts();
+      return [];
     }
 
     return (data || []).map(row => ({
@@ -472,8 +508,8 @@ const supabaseDataService = {
 
   async addAccount(account) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.addAccount(account);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     const { data, error } = await supabase.from('accounts').insert({
@@ -500,8 +536,8 @@ const supabaseDataService = {
 
   async updateAccount(id, updates) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.updateAccount(id, updates);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     const payload = {};
@@ -533,8 +569,8 @@ const supabaseDataService = {
 
   async deleteAccount(id) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.deleteAccount(id);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     const { error } = await supabase
@@ -551,12 +587,12 @@ const supabaseDataService = {
   /* ---- Goals ---- */
   async getGoals() {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.getGoals();
+    if (!supabase || !this.userId) {
+      return [];
     }
 
     const { data, error } = await _select(supabase, 'goals', {
-      columns: 'id, name, target_amount, saved_amount, deadline, is_completed, color',
+      columns: 'id, name, target_amount, saved_amount, deadline, is_completed, color, icon',
       filters: { user_id: this.userId },
       orderBy: { column: 'created_at', ascending: false },
     });
@@ -571,14 +607,15 @@ const supabaseDataService = {
       deadline: row.deadline,
       is_completed: row.is_completed,
       color: row.color || '#22C55E',
-      icon: '',
+      icon: row.icon || '',
+      category: row.icon || 'other',
     }));
   },
 
   async addGoal(goal) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.addGoal(goal);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     const { data, error } = await supabase.from('goals').insert({
@@ -588,6 +625,7 @@ const supabaseDataService = {
       saved_amount: Number(goal.current || 0),
       deadline: goal.deadline || null,
       color: goal.color || '#22C55E',
+      icon: goal.category || goal.icon || 'other',
     }).select().single();
 
     if (error) throw new Error(`Không thể thêm mục tiêu: ${error.message}`);
@@ -600,14 +638,15 @@ const supabaseDataService = {
       deadline: data.deadline,
       is_completed: data.is_completed,
       color: data.color || '#22C55E',
-      icon: '',
+      icon: data.icon || '',
+      category: data.icon || 'other',
     };
   },
 
   async updateGoal(id, updates) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.updateGoal(id, updates);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     const payload = {};
@@ -617,6 +656,7 @@ const supabaseDataService = {
     if (updates.deadline !== undefined) payload.deadline = updates.deadline;
     if (updates.is_completed !== undefined) payload.is_completed = updates.is_completed;
     if (updates.color) payload.color = updates.color;
+    if (updates.category) payload.icon = updates.category;
 
     const { data, error } = await supabase
       .from('goals')
@@ -636,14 +676,15 @@ const supabaseDataService = {
       deadline: data.deadline,
       is_completed: data.is_completed,
       color: data.color || '#22C55E',
-      icon: '',
+      icon: data.icon || '',
+      category: data.icon || 'other',
     };
   },
 
   async deleteGoal(id) {
     const supabase = getSupabase();
-    if (!supabase) {
-      return dataService.deleteGoal(id);
+    if (!supabase || !this.userId) {
+      throw new Error('Chưa kết nối Supabase hoặc phiên đăng nhập không hợp lệ.');
     }
 
     const { error } = await supabase
@@ -697,18 +738,27 @@ const supabaseDataService = {
   },
 
   /* ---- Notifications ---- */
-  async getNotifications(limit = 20) {
+  async getNotifications(options = {}) {
+    const limit = typeof options === 'number' ? options : (options?.limit || 20);
     const supabase = getSupabase();
     if (!supabase) return [];
 
+    const filters = { user_id: this.userId };
+    if (options?.filter === 'unread') {
+      filters.is_read = false;
+    }
+
     const { data, error } = await _select(supabase, 'notifications', {
       columns: 'id, type, title, message, is_read, action_label, action_url, created_at',
-      filters: { user_id: this.userId },
+      filters,
       orderBy: { column: 'created_at', ascending: false },
       limit,
     });
 
-    if (error) throw new Error(`Không thể tải thông báo: ${error.message}`);
+    if (error) {
+      console.warn('[supabaseService] Không thể tải thông báo:', error.message);
+      return [];
+    }
 
     return (data || []).map(row => ({
       id: row.id,
@@ -733,6 +783,83 @@ const supabaseDataService = {
       .eq('user_id', this.userId);
 
     return !error;
+  },
+
+  async markAllNotificationsRead() {
+    const supabase = getSupabase();
+    if (!supabase) return false;
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', this.userId)
+      .eq('is_read', false);
+
+    return !error;
+  },
+
+  async deleteNotification(id) {
+    const supabase = getSupabase();
+    if (!supabase) return false;
+
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', this.userId);
+
+    return !error;
+  },
+
+  async clearAllNotifications() {
+    const supabase = getSupabase();
+    if (!supabase) return false;
+
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', this.userId);
+
+    return !error;
+  },
+
+  async addNotification(notif) {
+    const supabase = getSupabase();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: this.userId,
+        type: notif.type || 'info',
+        title: notif.title || '',
+        message: notif.message || '',
+        is_read: false,
+        action_label: notif.action_label || null,
+        action_url: notif.action_url || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.warn('[supabaseService] addNotification error:', error.message);
+      return null;
+    }
+    return data;
+  },
+
+  async getUnreadNotificationCount() {
+    const supabase = getSupabase();
+    if (!supabase) return 0;
+
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', this.userId)
+      .eq('is_read', false);
+
+    if (error) return 0;
+    return count || 0;
   },
 
   /* ---- Profile ---- */
@@ -861,7 +988,7 @@ const supabaseDataService = {
 
   /* ---- Persistence ---- */
   async resetToDefaults() {
-    return dataService.resetToDefaults();
+    throw new Error('Chức năng đặt lại về mặc định không hỗ trợ trực tiếp trên Cloud.');
   },
 };
 

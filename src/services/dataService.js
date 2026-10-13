@@ -13,15 +13,17 @@
  * @typedef {import('../types/index.js').Settings} Settings
  */
 
-import { load, save, STORAGE_KEYS } from './storage.js';
+import { load, save, remove, STORAGE_KEYS, getStorageScope } from './storage.js';
 import {
   getDefaultTransactions,
   getDefaultBudgets,
   getDefaultAccounts,
   getDefaultGoals,
   getDefaultRecurring,
+  getDefaultNotifications,
   DEFAULT_SETTINGS,
 } from './mockData.js';
+import { emit } from '../utils/eventBus.js';
 import {
   generateId,
   formatCurrency,
@@ -32,66 +34,322 @@ import {
 } from '../utils/format.js';
 import { CATEGORIES, getCategoryLabelVi, getCategoryColor } from '../constants/categories.js';
 
-export const SEED_VERSION = 'v2026.5';
+export const SEED_VERSION = 'v2026.6';
+
+// Exact sets of legacy seed IDs across all previous versions (before isSeed flag was established).
+// Rule: NEVER identify seed items by name or value heuristics, ONLY by isSeed === true or exact seed IDs.
+const LEGACY_SEED_TX_IDS = new Set([
+  't01', 't02', 't02b', 't03', 't04', 't05', 't06', 't07', 't08', 't09',
+  't10', 't11', 't12', 't13', 't14', 't15', 't16', 't17', 't18', 't18a',
+  't19', 't19a', 't20', 't20a', 't21', 't21a', 't22', 't22a', 't23', 't24',
+  't25', 't26', 't27', 't28', 't29', 't30', 't31', 't32', 't33', 't34',
+  't35', 't36', 't37', 't38', 't39', 't40', 't41', 't42', 't43', 't44',
+  't45', 't46', 't47', 't48', 't49', 't50', 't51', 't52', 't53', 't54',
+  't55', 't56', 't57', 't58', 't59', 't60', 't61', 't62', 't63', 't64',
+  't65', 't66', 't67', 't68', 't_p1', 't_p2', 't_f1', 't_f2', 't_c1',
+]);
+
+const LEGACY_SEED_ACCOUNT_IDS = new Set(['a01', 'a02', 'a03', 'acc-1', 'acc-2', 'acc-3']);
+const LEGACY_SEED_GOAL_IDS = new Set(['g01', 'g02', 'g-1', 'g-2']);
+const LEGACY_SEED_RECURRING_IDS = new Set(['r01', 'r02', 'r03', 'rec-1', 'rec-2', 'rec-3']);
+const LEGACY_SEED_BUDGET_IDS = new Set(['b01', 'b02', 'b03', 'b04', 'b05', 'b06']);
+
+// Legacy seed budget limits prior to VND standardization (from v2026.5 and earlier)
+const LEGACY_SEED_BUDGET_LIMITS = {
+  food: 800,
+  transport: 300,
+  entertainment: 300,
+  shopping: 500,
+  bills: 1500,
+  health: 300,
+};
+
+/**
+ * Clean data bootstrap for new authenticated user.
+ * Idempotent: runs once per user scope, creates 1 Cash account with 0 VND,
+ * suggested budgets (isSuggested: true, isSeed: false), clean settings,
+ * and ZERO transactions, goals, or recurring items.
+ *
+ * @param {string} [scope]
+ * @param {boolean} [forceReset=false]
+ * @returns {object}
+ */
+export function ensureUserBootstrap(scope = getStorageScope(), forceReset = false) {
+  const isBootstrapped = load(STORAGE_KEYS.USER_BOOTSTRAPPED, false, scope);
+  if (isBootstrapped && !forceReset) {
+    return {
+      transactions: load(STORAGE_KEYS.TRANSACTIONS, [], scope),
+      budgets: load(STORAGE_KEYS.BUDGETS, [], scope),
+      settings: load(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS, scope),
+      accounts: load(STORAGE_KEYS.ACCOUNTS, [], scope),
+      goals: load(STORAGE_KEYS.GOALS, [], scope),
+      recurring: load(STORAGE_KEYS.RECURRING, [], scope),
+      notifications: load(STORAGE_KEYS.NOTIFICATIONS, [], scope),
+    };
+  }
+
+  // 1. Exactly 1 default Cash account (balance 0, isSeed: false, editable & deletable)
+  const defaultAccounts = [
+    {
+      id: `acc_${generateId()}`,
+      name: 'Tiền mặt',
+      type: 'checking',
+      balance: 0,
+      currency: 'VND',
+      is_default: true,
+      isSeed: false,
+    },
+  ];
+
+  // 2. Suggested budgets based on Task 1B VND standard, marked with isSuggested: true, isSeed: false
+  const suggestedBudgets = [
+    { id: `b_${generateId()}`, category: 'food', limit: 5000000, spent: 0, isSuggested: true, isSeed: false },
+    { id: `b_${generateId()}`, category: 'transport', limit: 2000000, spent: 0, isSuggested: true, isSeed: false },
+    { id: `b_${generateId()}`, category: 'shopping', limit: 3000000, spent: 0, isSuggested: true, isSeed: false },
+    { id: `b_${generateId()}`, category: 'bills', limit: 4000000, spent: 0, isSuggested: true, isSeed: false },
+    { id: `b_${generateId()}`, category: 'entertainment', limit: 1500000, spent: 0, isSuggested: true, isSeed: false },
+    { id: `b_${generateId()}`, category: 'health', limit: 1500000, spent: 0, isSuggested: true, isSeed: false },
+  ];
+
+  // 3. Clean settings with VND currency, monthStartDay = 1, payday null
+  const cleanSettings = {
+    ...DEFAULT_SETTINGS,
+    currency: 'VND',
+    monthStartDay: 1,
+    payday: null,
+    isSeed: false,
+  };
+
+  // 4. ZERO transactions, ZERO goals, ZERO recurring, ZERO notifications
+  const emptyTx = [];
+  const emptyGoals = [];
+  const emptyRecurring = [];
+  const emptyNotifications = [];
+
+  save(STORAGE_KEYS.ACCOUNTS, defaultAccounts, scope);
+  save(STORAGE_KEYS.BUDGETS, suggestedBudgets, scope);
+  save(STORAGE_KEYS.SETTINGS, cleanSettings, scope);
+  save(STORAGE_KEYS.TRANSACTIONS, emptyTx, scope);
+  save(STORAGE_KEYS.GOALS, emptyGoals, scope);
+  save(STORAGE_KEYS.RECURRING, emptyRecurring, scope);
+  save(STORAGE_KEYS.NOTIFICATIONS, emptyNotifications, scope);
+  save(STORAGE_KEYS.USER_BOOTSTRAPPED, true, scope);
+
+  return {
+    transactions: emptyTx,
+    budgets: suggestedBudgets,
+    settings: cleanSettings,
+    accounts: defaultAccounts,
+    goals: emptyGoals,
+    recurring: emptyRecurring,
+    notifications: emptyNotifications,
+  };
+}
+
+/**
+ * Clear guest seed data on demand ("Xoá dữ liệu mẫu" button).
+ * Puts guest mode into a clean state like a newly created account.
+ */
+export function clearGuestSeedData() {
+  const scope = 'guest';
+  const defaultAccounts = [
+    {
+      id: `acc_${generateId()}`,
+      name: 'Tiền mặt',
+      type: 'checking',
+      balance: 0,
+      currency: 'VND',
+      is_default: true,
+      isSeed: false,
+    },
+  ];
+  const suggestedBudgets = [
+    { id: `b_${generateId()}`, category: 'food', limit: 5000000, spent: 0, isSuggested: true, isSeed: false },
+    { id: `b_${generateId()}`, category: 'transport', limit: 2000000, spent: 0, isSuggested: true, isSeed: false },
+    { id: `b_${generateId()}`, category: 'shopping', limit: 3000000, spent: 0, isSuggested: true, isSeed: false },
+    { id: `b_${generateId()}`, category: 'bills', limit: 4000000, spent: 0, isSuggested: true, isSeed: false },
+    { id: `b_${generateId()}`, category: 'entertainment', limit: 1500000, spent: 0, isSuggested: true, isSeed: false },
+    { id: `b_${generateId()}`, category: 'health', limit: 1500000, spent: 0, isSuggested: true, isSeed: false },
+  ];
+  save(STORAGE_KEYS.ACCOUNTS, defaultAccounts, scope);
+  save(STORAGE_KEYS.BUDGETS, suggestedBudgets, scope);
+  save(STORAGE_KEYS.TRANSACTIONS, [], scope);
+  save(STORAGE_KEYS.GOALS, [], scope);
+  save(STORAGE_KEYS.RECURRING, [], scope);
+  save(STORAGE_KEYS.NOTIFICATIONS, [], scope);
+  reinitData();
+  emit('data:changed');
+}
 
 /* ------------------------------------------------------------------ *
- * Initialization with SEED_VERSION migration
+ * Initialization with SEED_VERSION & AMOUNT_UNIT migration
  * ------------------------------------------------------------------ */
-function initData() {
-  const storedVersion = load(STORAGE_KEYS.SEED_VERSION, null);
-  const rawTx = load(STORAGE_KEYS.TRANSACTIONS, null);
-  const rawBudgets = load(STORAGE_KEYS.BUDGETS, null);
-  const rawSettings = load(STORAGE_KEYS.SETTINGS, null);
-  const rawAccounts = load(STORAGE_KEYS.ACCOUNTS, null);
-  const rawGoals = load(STORAGE_KEYS.GOALS, null);
-  const rawRecurring = load(STORAGE_KEYS.RECURRING, null);
+export function initData() {
+  const scope = getStorageScope();
 
+  // If not guest (user scope): strictly DO NOT seed! Bootstrap or load user data
+  if (scope !== 'guest') {
+    return ensureUserBootstrap(scope);
+  }
+
+  // --- GUEST SCOPE ONLY: SEED_VERSION & AMOUNT_UNIT migration ---
+  const storedVersion = load(STORAGE_KEYS.SEED_VERSION, null, 'guest');
+  const rawTx = load(STORAGE_KEYS.TRANSACTIONS, null, 'guest');
+  const rawBudgets = load(STORAGE_KEYS.BUDGETS, null, 'guest');
+  const rawSettings = load(STORAGE_KEYS.SETTINGS, null, 'guest');
+  const rawAccounts = load(STORAGE_KEYS.ACCOUNTS, null, 'guest');
+  const rawGoals = load(STORAGE_KEYS.GOALS, null, 'guest');
+  const rawRecurring = load(STORAGE_KEYS.RECURRING, null, 'guest');
+  const rawNotifications = load(STORAGE_KEYS.NOTIFICATIONS, null, 'guest');
+  const unitMigrated = load(STORAGE_KEYS.AMOUNT_UNIT_MIGRATED, null, 'guest');
+
+  // 1. One-time idempotent unit migration with backup strictly on guest scope
+  if (!unitMigrated) {
+    const backupSnapshot = {
+      timestamp: new Date().toISOString(),
+      transactions: rawTx,
+      budgets: rawBudgets,
+      settings: rawSettings,
+      accounts: rawAccounts,
+      goals: rawGoals,
+      recurring: rawRecurring,
+      notifications: rawNotifications,
+      seedVersion: storedVersion,
+    };
+    save(STORAGE_KEYS.BACKUP_BEFORE_UNIT_MIGRATION, backupSnapshot, 'guest');
+    save(STORAGE_KEYS.AMOUNT_UNIT_MIGRATED, 'vnd_v1', 'guest');
+  }
+
+  // 2. Transactions initialization / seed refresh (strictly isSeed or exact legacy IDs, NO regex, NO merchant name)
   let initialTx;
   if (!rawTx || storedVersion !== SEED_VERSION) {
-    // Preserve custom user-added transactions (not part of the default seed IDs)
     const freshSeed = getDefaultTransactions();
-    const seedIds = new Set(freshSeed.map(t => t.id));
+    const defaultTxIds = new Set(freshSeed.map(t => t.id));
+    const isSeedTx = (tx) => Boolean(
+      tx && (tx.isSeed === true || defaultTxIds.has(tx.id) || LEGACY_SEED_TX_IDS.has(tx.id))
+    );
     const userCreatedTx = Array.isArray(rawTx)
-      ? rawTx.filter(tx => tx && tx.id && !seedIds.has(tx.id) && !tx.isSeed && !/^t\d+[a-z]?$/i.test(tx.id))
+      ? rawTx.filter(tx => !isSeedTx(tx))
       : [];
 
     initialTx = [...userCreatedTx, ...freshSeed];
-    save(STORAGE_KEYS.TRANSACTIONS, initialTx);
-    save(STORAGE_KEYS.SEED_VERSION, SEED_VERSION);
+    save(STORAGE_KEYS.TRANSACTIONS, initialTx, 'guest');
+    save(STORAGE_KEYS.SEED_VERSION, SEED_VERSION, 'guest');
   } else {
     initialTx = rawTx;
   }
 
+  // 3. Budgets initialization / seed refresh (preserving user-modified limits upon SEED_VERSION upgrade)
   let initialBudgets;
   if (!rawBudgets || storedVersion !== SEED_VERSION) {
     const defaultBudgets = getDefaultBudgets();
     if (Array.isArray(rawBudgets) && rawBudgets.length > 0) {
-      const budgetMap = new Map(rawBudgets.map(b => [b.category, b]));
-      initialBudgets = defaultBudgets.map(b => {
-        const existing = budgetMap.get(b.category);
-        return existing ? { ...b, limit: existing.limit } : b;
-      });
-      // Add custom categories that user created
-      for (const b of rawBudgets) {
-        if (!initialBudgets.some(db => db.category === b.category)) {
-          initialBudgets.push(b);
+      const mergedDefaults = defaultBudgets.map(defaultB => {
+        const existing = rawBudgets.find(b => b && b.category === defaultB.category);
+        if (!existing) return defaultB;
+
+        // User-modified check:
+        // 1. Explicit userModified flag
+        // 2. Or limit differed from both legacy seed limit and fresh seed limit
+        const isUserModified = existing.userModified === true ||
+          (existing.limit !== undefined &&
+           existing.limit !== LEGACY_SEED_BUDGET_LIMITS[existing.category] &&
+           existing.limit !== defaultB.limit);
+
+        if (isUserModified) {
+          return {
+            ...existing,
+            userModified: true,
+          };
         }
-      }
+
+        // Unmodified seed budget: update to fresh seed VND limit
+        return {
+          ...defaultB,
+          id: existing.id || defaultB.id,
+          spent: existing.spent ?? 0,
+        };
+      });
+
+      const defaultCategories = new Set(defaultBudgets.map(b => b.category));
+      const userCustomBudgets = rawBudgets.filter(b => b && b.category && !defaultCategories.has(b.category));
+      initialBudgets = [...mergedDefaults, ...userCustomBudgets];
     } else {
       initialBudgets = defaultBudgets;
     }
-    save(STORAGE_KEYS.BUDGETS, initialBudgets);
+    save(STORAGE_KEYS.BUDGETS, initialBudgets, 'guest');
   } else {
     initialBudgets = rawBudgets;
+  }
+
+  // 4. Accounts initialization / seed refresh (strictly isSeed or exact legacy IDs, NO name matching)
+  let initialAccounts;
+  if (!rawAccounts || storedVersion !== SEED_VERSION) {
+    const defaultAccounts = getDefaultAccounts();
+    const defaultAccountIds = new Set(defaultAccounts.map(a => a.id));
+    const isSeedAccount = (a) => Boolean(
+      a && (a.isSeed === true || defaultAccountIds.has(a.id) || LEGACY_SEED_ACCOUNT_IDS.has(a.id))
+    );
+    const userAccounts = Array.isArray(rawAccounts)
+      ? rawAccounts.filter(a => !isSeedAccount(a))
+      : [];
+    initialAccounts = [...defaultAccounts, ...userAccounts];
+    save(STORAGE_KEYS.ACCOUNTS, initialAccounts, 'guest');
+  } else {
+    initialAccounts = rawAccounts;
+  }
+
+  // 5. Goals initialization / seed refresh (strictly isSeed or exact legacy IDs, NO name matching)
+  let initialGoals;
+  if (!rawGoals || storedVersion !== SEED_VERSION) {
+    const defaultGoals = getDefaultGoals();
+    const defaultGoalIds = new Set(defaultGoals.map(g => g.id));
+    const isSeedGoal = (g) => Boolean(
+      g && (g.isSeed === true || defaultGoalIds.has(g.id) || LEGACY_SEED_GOAL_IDS.has(g.id))
+    );
+    const userGoals = Array.isArray(rawGoals)
+      ? rawGoals.filter(g => !isSeedGoal(g))
+      : [];
+    initialGoals = [...defaultGoals, ...userGoals];
+    save(STORAGE_KEYS.GOALS, initialGoals, 'guest');
+  } else {
+    initialGoals = rawGoals;
+  }
+
+  // 6. Recurring initialization / seed refresh (strictly isSeed or exact legacy IDs, NO merchant name)
+  let initialRecurring;
+  if (!rawRecurring || storedVersion !== SEED_VERSION) {
+    const defaultRecurring = getDefaultRecurring();
+    const defaultRecIds = new Set(defaultRecurring.map(r => r.id));
+    const isSeedRec = (r) => Boolean(
+      r && (r.isSeed === true || defaultRecIds.has(r.id) || LEGACY_SEED_RECURRING_IDS.has(r.id))
+    );
+    const userRecurring = Array.isArray(rawRecurring)
+      ? rawRecurring.filter(r => !isSeedRec(r))
+      : [];
+    initialRecurring = [...defaultRecurring, ...userRecurring];
+    save(STORAGE_KEYS.RECURRING, initialRecurring, 'guest');
+  } else {
+    initialRecurring = rawRecurring;
+  }
+
+  // 7. Notifications initialization / seed refresh
+  let initialNotifications;
+  if (!rawNotifications || storedVersion !== SEED_VERSION) {
+    initialNotifications = getDefaultNotifications();
+    save(STORAGE_KEYS.NOTIFICATIONS, initialNotifications, 'guest');
+  } else {
+    initialNotifications = rawNotifications;
   }
 
   return {
     transactions: initialTx,
     budgets: initialBudgets,
     settings: rawSettings || DEFAULT_SETTINGS,
-    accounts: (Array.isArray(rawAccounts) && rawAccounts.length > 0) ? rawAccounts : getDefaultAccounts(),
-    goals: rawGoals || getDefaultGoals(),
-    recurring: rawRecurring || getDefaultRecurring(),
+    accounts: initialAccounts,
+    goals: initialGoals,
+    recurring: initialRecurring,
+    notifications: initialNotifications,
   };
 }
 
@@ -102,6 +360,7 @@ let settings = _initialState.settings;
 let accounts = _initialState.accounts;
 let goals = _initialState.goals;
 let recurring = _initialState.recurring;
+let notifications = _initialState.notifications;
 
 /* ------------------------------------------------------------------ *
  * Persistence helper — saves all mutable state to storage
@@ -113,11 +372,29 @@ function persist() {
   save(STORAGE_KEYS.ACCOUNTS, accounts);
   save(STORAGE_KEYS.GOALS, goals);
   save(STORAGE_KEYS.RECURRING, recurring);
+  save(STORAGE_KEYS.NOTIFICATIONS, notifications);
 }
 
-// Ensure all defaults are persisted on first load so IndexedDB migration
-// can pick them up (previously, settings/accounts/goals/recurring were
-// only written to storage on first user edit, not on init)
+/**
+ * Re-run initialization and reload state from storage (useful for SEED_VERSION tests and hot migrations).
+ */
+export function reinitData() {
+  const state = initData();
+  transactions = state.transactions;
+  budgets = state.budgets;
+  settings = state.settings;
+  accounts = state.accounts;
+  goals = state.goals;
+  recurring = state.recurring;
+  notifications = state.notifications;
+  persist();
+  return state;
+}
+
+export function resetDataServiceState() {
+  return reinitData();
+}
+
 persist();
 
 /* ------------------------------------------------------------------ *
@@ -267,63 +544,16 @@ export function getWeeklySeries(txList) {
   return series;
 }
 
+import { generateRuleBasedInsight } from '../features/dashboard/periodInsights.js';
+
 /**
- * Generate a financial insight based on current data.
+ * Generate a financial insight based on current data (rule-based).
  * @param {Transaction[]} txList
  * @param {Budget[]} budgetList
  * @returns {{text:string, detail:string, type:'positive'|'warning'|'info'}}
  */
 export function generateInsight(txList, budgetList) {
-  const currentMonth = getLocalMonthString(new Date());
-  const monthTx = (txList || []).filter(tx => tx && typeof tx.date === 'string' && tx.date.startsWith(currentMonth));
-  const totals = computeTotals(monthTx);
-
-  // Check if any budget is near/over limit
-  const progress = getBudgetProgress(budgetList, txList);
-  const nearLimit = progress.filter(b => b.limit > 0 && (b.spent / b.limit) * 100 >= 80);
-  if (nearLimit.length > 0) {
-    const worst = nearLimit[0];
-    const pct = Math.round((worst.spent / worst.limit) * 100);
-    const catName = getCategoryLabelVi(worst.category) || worst.category;
-    const remaining = worst.limit - worst.spent;
-    return {
-      text: `${catName} đã dùng ${pct}% ngân sách`,
-      detail: `Chỉ còn ${formatCurrency(remaining)} cho ${catName} trong tháng này. Cắt giảm chi tiêu để tránh vượt ngân sách.`,
-      type: 'warning',
-      action: `Xem ngân sách ${catName.toLowerCase()}`,
-      actionPage: 'budgets',
-    };
-  }
-
-  // Check if savings rate improved
-  if (totals.income > 0) {
-    const rate = computeSavingsRate(monthTx);
-    const net = totals.income - totals.expenses;
-    if (net > 0) {
-      return {
-        text: `Bạn đang tiết kiệm ${rate.toFixed(1)}% thu nhập`,
-        detail: `Tiết kiệm được ${formatCurrency(net)} từ thu nhập ${formatCurrency(totals.income)} trong tháng này.`,
-        type: 'positive',
-        action: 'Xem báo cáo chi tiêu',
-        actionPage: 'reports',
-      };
-    }
-    return {
-      text: `Chi tiêu (${formatCurrency(totals.expenses)}) đã vượt thu nhập (${formatCurrency(totals.income)})`,
-      detail: 'Bạn đang chi tiêu nhiều hơn thu nhập. Hãy xem xét cắt giảm chi phí không cần thiết.',
-      type: 'warning',
-      action: 'Xem báo cáo',
-      actionPage: 'reports',
-    };
-  }
-
-  return {
-    text: 'Theo dõi giao dịch đầu tiên để xem phân tích',
-    detail: 'Thêm thu nhập hoặc chi phí để bắt đầu.',
-    type: 'info',
-    action: 'Thêm giao dịch',
-    actionPage: 'transactions',
-  };
+  return generateRuleBasedInsight(txList, budgetList);
 }
 
 /* ------------------------------------------------------------------ *
@@ -363,18 +593,24 @@ export const dataService = {
     return [...budgets];
   },
 
+  getBudgetDefaults() {
+    return getDefaultBudgets();
+  },
+
   async addBudget(budget) {
-    const newBudget = { id: generateId(), ...budget };
+    const newBudget = { id: generateId(), userModified: true, ...budget };
     budgets.push(newBudget);
     persist();
+    emit('data:changed');
     return newBudget;
   },
 
   async updateBudget(id, updates) {
     const b = budgets.find(b => b.id === id);
     if (!b) return null;
-    Object.assign(b, updates);
+    Object.assign(b, updates, { userModified: true });
     persist();
+    emit('data:changed');
     return b;
   },
 
@@ -383,7 +619,52 @@ export const dataService = {
     if (idx === -1) return false;
     budgets.splice(idx, 1);
     persist();
+    emit('data:changed');
     return true;
+  },
+
+  async resetBudgets(options = {}) {
+    const mode = options?.mode || 'default';
+    if (mode === '50_30_20') {
+      const currentMonth = getLocalMonthString(new Date());
+      const monthIncome = (transactions || [])
+        .filter(t => t && t.type === 'income' && typeof t.date === 'string' && t.date.startsWith(currentMonth))
+        .reduce((sum, t) => sum + parseNumber(t.amount), 0);
+
+      const income = Number(options?.totalIncome) > 0 ? Number(options.totalIncome) : (monthIncome > 0 ? monthIncome : 20000000);
+
+      budgets = [
+        { id: generateId(), category: 'bills',         limit: Math.round(income * 0.20), spent: 0 },
+        { id: generateId(), category: 'food',          limit: Math.round(income * 0.20), spent: 0 },
+        { id: generateId(), category: 'transport',     limit: Math.round(income * 0.10), spent: 0 },
+        { id: generateId(), category: 'shopping',      limit: Math.round(income * 0.15), spent: 0 },
+        { id: generateId(), category: 'entertainment',  limit: Math.round(income * 0.15), spent: 0 },
+        { id: generateId(), category: 'health',         limit: Math.round(income * 0.10), spent: 0 },
+      ];
+    } else if (mode === 'zero') {
+      const defaults = getDefaultBudgets();
+      budgets = defaults.map(d => ({ ...d, id: generateId(), limit: 0, spent: 0 }));
+    } else {
+      budgets = getDefaultBudgets();
+    }
+    persist();
+    emit('data:changed');
+    return [...budgets];
+  },
+
+  async resetSingleBudget(id) {
+    const b = budgets.find(item => item.id === id);
+    if (!b) return null;
+    const defaults = getDefaultBudgets();
+    const match = defaults.find(d => d.category === b.category);
+    if (match) {
+      b.limit = match.limit;
+    } else {
+      b.limit = 500000;
+    }
+    persist();
+    emit('data:changed');
+    return b;
   },
 
   /* ---- Settings ---- */
@@ -400,8 +681,14 @@ export const dataService = {
   /* ---- Accounts ---- */
   async getAccounts() {
     if (!Array.isArray(accounts) || accounts.length === 0) {
-      accounts = getDefaultAccounts();
-      persist();
+      if (getStorageScope() === 'guest') {
+        accounts = getDefaultAccounts();
+        persist();
+      } else {
+        const state = ensureUserBootstrap(getStorageScope());
+        accounts = state.accounts;
+        persist();
+      }
     }
     return [...accounts];
   },
@@ -438,6 +725,7 @@ export const dataService = {
     const newGoal = { id: generateId(), ...goal };
     goals.push(newGoal);
     persist();
+    emit('data:changed');
     return newGoal;
   },
 
@@ -446,6 +734,7 @@ export const dataService = {
     if (!g) return null;
     Object.assign(g, updates);
     persist();
+    emit('data:changed');
     return { ...g };
   },
 
@@ -454,6 +743,7 @@ export const dataService = {
     if (idx === -1) return false;
     goals.splice(idx, 1);
     persist();
+    emit('data:changed');
     return true;
   },
 
@@ -466,6 +756,7 @@ export const dataService = {
     const newItem = { id: generateId(), ...item };
     recurring.push(newItem);
     persist();
+    emit('data:changed');
     return newItem;
   },
 
@@ -474,6 +765,7 @@ export const dataService = {
     if (!r) return null;
     Object.assign(r, updates);
     persist();
+    emit('data:changed');
     return r;
   },
 
@@ -482,6 +774,7 @@ export const dataService = {
     if (idx === -1) return false;
     recurring.splice(idx, 1);
     persist();
+    emit('data:changed');
     return true;
   },
 
@@ -490,22 +783,120 @@ export const dataService = {
     return CATEGORIES.map(c => ({ ...c }));
   },
 
-  async getNotifications() { return []; },
-  async markNotificationRead() { return false; },
+  /* ---- Notifications ---- */
+  async getNotifications(options = {}) {
+    let list = [...notifications];
+    if (options.filter === 'unread') {
+      list = list.filter(n => !n.is_read);
+    } else if (options.filter === 'finance') {
+      list = list.filter(n => ['warning', 'bill', 'budget', 'income', 'expense'].includes(n.type) || ['budget', 'bill', 'finance'].includes(n.category));
+    }
+    list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    if (options.limit && options.limit > 0) {
+      list = list.slice(0, options.limit);
+    }
+    return list;
+  },
+
+  async markNotificationRead(id) {
+    const item = notifications.find(n => n.id === id);
+    if (!item) return false;
+    item.is_read = true;
+    persist();
+    emit('notifications:changed', { unreadCount: notifications.filter(n => !n.is_read).length });
+    return true;
+  },
+
+  async markAllNotificationsRead() {
+    notifications.forEach(n => {
+      n.is_read = true;
+    });
+    persist();
+    emit('notifications:changed', { unreadCount: 0 });
+    return true;
+  },
+
+  async deleteNotification(id) {
+    const idx = notifications.findIndex(n => n.id === id);
+    if (idx === -1) return false;
+    notifications.splice(idx, 1);
+    persist();
+    emit('notifications:changed', { unreadCount: notifications.filter(n => !n.is_read).length });
+    return true;
+  },
+
+  async clearAllNotifications() {
+    notifications = [];
+    persist();
+    emit('notifications:changed', { unreadCount: 0 });
+    return true;
+  },
+
+  async addNotification(notif) {
+    const newNotif = {
+      id: notif.id || generateId('notif'),
+      type: notif.type || 'info',
+      category: notif.category || 'system',
+      title: notif.title || '',
+      message: notif.message || '',
+      is_read: false,
+      action_label: notif.action_label || null,
+      action_url: notif.action_url || null,
+      created_at: notif.created_at || new Date().toISOString(),
+    };
+    notifications.unshift(newNotif);
+    persist();
+    emit('notifications:changed', { unreadCount: notifications.filter(n => !n.is_read).length });
+    return newNotif;
+  },
+
+  async getUnreadNotificationCount() {
+    return notifications.filter(n => !n.is_read).length;
+  },
 
   async getProfile() { return { id: 'mock-user', full_name: 'Luxe User', currency: 'VND' }; },
   async updateProfile(updates) { return { id: 'mock-user', full_name: 'Luxe User', currency: 'VND', ...updates }; },
 
   /* ---- Persistence ---- */
   async resetToDefaults() {
-    transactions = getDefaultTransactions();
-    budgets = getDefaultBudgets();
-    settings = { ...DEFAULT_SETTINGS };
-    accounts = getDefaultAccounts();
-    goals = getDefaultGoals();
-    recurring = getDefaultRecurring();
-    save(STORAGE_KEYS.SEED_VERSION, SEED_VERSION);
+    if (getStorageScope() === 'guest') {
+      transactions = getDefaultTransactions();
+      budgets = getDefaultBudgets();
+      settings = { ...DEFAULT_SETTINGS };
+      accounts = getDefaultAccounts();
+      goals = getDefaultGoals();
+      recurring = getDefaultRecurring();
+      notifications = getDefaultNotifications();
+      save(STORAGE_KEYS.SEED_VERSION, SEED_VERSION, 'guest');
+    } else {
+      const state = ensureUserBootstrap(getStorageScope(), true);
+      transactions = state.transactions;
+      budgets = state.budgets;
+      settings = state.settings;
+      accounts = state.accounts;
+      goals = state.goals;
+      recurring = state.recurring;
+      notifications = state.notifications;
+    }
     persist();
+    emit('notifications:changed', { unreadCount: notifications.filter(n => !n.is_read).length });
+    emit('data:changed');
+  },
+
+  reinitData() {
+    return reinitData();
+  },
+
+  resetDataServiceState() {
+    return resetDataServiceState();
+  },
+
+  ensureUserBootstrap(scope, forceReset) {
+    return ensureUserBootstrap(scope, forceReset);
+  },
+
+  clearGuestSeedData() {
+    return clearGuestSeedData();
   },
 };
 

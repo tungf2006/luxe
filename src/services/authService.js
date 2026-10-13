@@ -11,6 +11,12 @@
 import { getSupabase, initSupabase } from './supabaseClient.js';
 import { emit } from '../utils/eventBus.js';
 import { HAS_SUPABASE } from '../config/env.js';
+import { setStorageScope } from './storage.js';
+
+function _getMockUserId(email) {
+  if (!email || email === 'guest@luxe.dev') return 'guest';
+  return 'mock_' + email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+}
 
 /* ---------------------------------------------------------------- *
  * Internal State
@@ -86,23 +92,29 @@ export async function initAuth() {
     if (isExplicitlyLoggedOut) {
       _user = null;
       _session = null;
+      setStorageScope('guest');
     } else if (mockSession) {
       try {
         _user = JSON.parse(mockSession);
         _session = { user: _user };
+        const isGuest = _user?.id === 'guest' || _user?.isGuest === true || _user?.email === 'guest@luxe.dev';
+        setStorageScope(isGuest ? 'guest' : `user:${_user.id}`);
       } catch (e) {
         _user = null;
         _session = null;
+        setStorageScope('guest');
       }
     } else {
-      const mockUser = {
-        id: 'mock-user',
-        email: 'user@luxe.dev',
-        user_metadata: { full_name: 'Luxe User', display_name: 'Luxe User' },
+      const guestUser = {
+        id: 'guest',
+        email: 'guest@luxe.dev',
+        isGuest: true,
+        user_metadata: { full_name: 'Khách Trải Nghiệm', display_name: 'Khách Trải Nghiệm' },
       };
-      _session = { user: mockUser };
-      _user = mockUser;
-      localStorage.setItem('luxe-mock-session', JSON.stringify(mockUser));
+      _session = { user: guestUser };
+      _user = guestUser;
+      setStorageScope('guest');
+      localStorage.setItem('luxe-mock-session', JSON.stringify(guestUser));
     }
 
     _isInitialized = true;
@@ -120,10 +132,33 @@ export async function initAuth() {
 
     _session = session;
     _user = session?.user ?? null;
+
+    // If no cloud session, check for active Guest mode session
+    if (!_user) {
+      const isExplicitlyLoggedOut = localStorage.getItem('luxe-logged-out') === 'true';
+      const mockSession = localStorage.getItem('luxe-mock-session');
+      if (!isExplicitlyLoggedOut && mockSession) {
+        try {
+          _user = JSON.parse(mockSession);
+          _session = { user: _user };
+        } catch (e) {
+          _user = null;
+          _session = null;
+        }
+      }
+    }
+
+    if (_user) {
+      const isGuest = _user.id === 'guest' || _user.isGuest === true || _user.email === 'guest@luxe.dev';
+      setStorageScope(isGuest ? 'guest' : `user:${_user.id}`);
+    } else {
+      setStorageScope('guest');
+    }
   } catch (err) {
     console.warn('[authService] Error during getSession:', err);
     _session = null;
     _user = null;
+    setStorageScope('guest');
   }
 
   // Bind auth state listener once
@@ -178,14 +213,16 @@ export async function signIn(email, password) {
 
   if (!supabase) {
     // Mock mode
+    const userId = _getMockUserId(email);
     const mockUser = {
-      id: 'mock-user',
+      id: userId,
       email,
       user_metadata: {
         display_name: email.split('@')[0],
         full_name: email.split('@')[0],
       },
     };
+    setStorageScope(`user:${userId}`);
     _session = { user: mockUser };
     _user = mockUser;
     _isInitialized = true;
@@ -206,6 +243,9 @@ export async function signIn(email, password) {
   _session = data.session;
   _user = data.user;
   _isInitialized = true;
+  if (_user?.id) {
+    setStorageScope(`user:${_user.id}`);
+  }
   emit('USER_LOGGED_IN', { session: data.session, user: data.user });
   window.dispatchEvent(new CustomEvent('auth:signed_in', { detail: { user: data.user } }));
 
@@ -219,22 +259,24 @@ export async function signIn(email, password) {
  * @returns {Promise<{user: object, error: null}>}
  */
 export async function signInAsGuest() {
-  const mockUser = {
-    id: 'mock-user',
+  const guestUser = {
+    id: 'guest',
     email: 'guest@luxe.dev',
+    isGuest: true,
     user_metadata: {
       display_name: 'Khách Trải Nghiệm',
       full_name: 'Khách Trải Nghiệm',
     },
   };
-  _session = { user: mockUser };
-  _user = mockUser;
+  setStorageScope('guest');
+  _session = { user: guestUser };
+  _user = guestUser;
   _isInitialized = true;
   localStorage.removeItem('luxe-logged-out');
-  localStorage.setItem('luxe-mock-session', JSON.stringify(mockUser));
-  emit('USER_LOGGED_IN', { session: _session, user: mockUser });
-  window.dispatchEvent(new CustomEvent('auth:signed_in', { detail: { user: mockUser } }));
-  return { user: mockUser, error: null };
+  localStorage.setItem('luxe-mock-session', JSON.stringify(guestUser));
+  emit('USER_LOGGED_IN', { session: _session, user: guestUser });
+  window.dispatchEvent(new CustomEvent('auth:signed_in', { detail: { user: guestUser } }));
+  return { user: guestUser, error: null };
 }
 
 /**
@@ -257,8 +299,9 @@ export async function signUp(email, password, metadataOrFullName) {
   const displayName = metadata.display_name || metadata.full_name || email.split('@')[0];
 
   if (!supabase) {
+    const userId = _getMockUserId(email);
     const mockUser = {
-      id: 'mock-user',
+      id: userId,
       email,
       user_metadata: {
         display_name: displayName,
@@ -266,9 +309,11 @@ export async function signUp(email, password, metadataOrFullName) {
         ...metadata,
       },
     };
+    setStorageScope(`user:${userId}`);
     _session = { user: mockUser };
     _user = mockUser;
     _isInitialized = true;
+    localStorage.removeItem('luxe-logged-out');
     localStorage.setItem('luxe-mock-session', JSON.stringify(mockUser));
     emit('USER_LOGGED_IN', { session: _session, user: mockUser });
     window.dispatchEvent(new CustomEvent('auth:signed_in', { detail: { user: mockUser } }));
@@ -365,6 +410,7 @@ export async function signOut() {
 
   localStorage.removeItem('luxe-mock-session');
   localStorage.setItem('luxe-logged-out', 'true');
+  setStorageScope('guest');
 
   if (!supabase) {
     _user = null;

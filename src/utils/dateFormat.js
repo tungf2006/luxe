@@ -123,6 +123,38 @@ export function formatDateGroupHeader(dateStr) {
 }
 
 /**
+ * Format date group header for recent transactions:
+ * "Hôm nay", "Hôm qua", or "dd/mm · Thứ ..." (e.g. "01/10 · Thứ Năm").
+ * @param {string} dateStr - ISO date string (YYYY-MM-DD)
+ * @param {Date} [baseDate=new Date()]
+ * @returns {string}
+ */
+export function getRecentDateGroupLabel(dateStr, baseDate = new Date()) {
+  if (!dateStr) return '';
+  const dStr = dateStr.slice(0, 10);
+  const parts = dStr.split('-');
+  if (parts.length < 3) return dateStr;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const d = parseInt(parts[2], 10);
+  const targetDate = new Date(y, m, d);
+
+  const todayDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+  const diffTime = todayDate.getTime() - targetDate.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Hôm nay';
+  if (diffDays === 1) return 'Hôm qua';
+
+  const dd = String(d).padStart(2, '0');
+  const mm = String(m + 1).padStart(2, '0');
+  const WEEKDAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const weekday = WEEKDAYS_VI[targetDate.getDay()];
+
+  return `${dd}/${mm} · ${weekday}`;
+}
+
+/**
  * Format a Date object as local ISO date string YYYY-MM-DD.
  * Timezone-safe (does not use toISOString).
  * @param {Date} [date=new Date()]

@@ -5,8 +5,8 @@
  */
 
 import dataService from '../../services/dataAdapter.js';
-import { formatCurrency, formatAmount, escapeHtml, formatRelative, formatDateShort, formatDateLong, parseNumber } from '../../utils/format.js';
-import { CATEGORY_MAP } from '../../constants/categories.js';
+import { formatCurrency, formatAmount, escapeHtml, formatRelative, formatDateShort, formatDateLong, parseNumber, removeDiacritics } from '../../utils/format.js';
+import { CATEGORY_MAP, getCategoryAvatarHtml } from '../../constants/categories.js';
 import { panelHeaderHTML } from '../../components/ui/PanelHeader.js';
 import { kpiCardHTML } from '../../components/ui/KPICard.js';
 import { showToast, showToastWithAction } from '../../components/ui/Toast.js';
@@ -15,6 +15,7 @@ import { showConfirmModal } from '../../components/ui/ConfirmModal.js';
 import { emit } from '../../utils/eventBus.js';
 import { pageHeaderHTML } from '../../components/ui/PageHeader.js';
 import { getRoute } from '../../config/routes.js';
+import { openRecurringModal } from './recurringModal.js';
 
 const RECURRING_ICONS = {
   cost: '<path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/>',
@@ -35,7 +36,11 @@ let undoBackupRecurring = null;
 function readUrlParams() {
   const hash = window.location.hash || '';
   const qIdx = hash.indexOf('?');
-  if (qIdx === -1) return;
+  if (qIdx === -1) {
+    _searchQuery = '';
+    _statusFilter = '';
+    return;
+  }
 
   const params = new URLSearchParams(hash.slice(qIdx));
   if (params.has('search')) _searchQuery = params.get('search');
@@ -62,10 +67,19 @@ function updateUrlParams() {
 
 function getFilteredRecurring() {
   return _recurringList.filter(item => {
-    const search = _searchQuery.toLowerCase();
-    const matchSearch = !search ||
-      item.merchant.toLowerCase().includes(search) ||
-      (CATEGORY_MAP[item.category]?.labelVi || item.category).toLowerCase().includes(search);
+    const rawSearch = (_searchQuery || '').trim().toLowerCase();
+    const normSearch = removeDiacritics(rawSearch);
+    const cat = CATEGORY_MAP[item.category];
+    const catLabel = cat?.labelVi || item.category;
+
+    const matchSearch = !rawSearch ||
+      item.merchant.toLowerCase().includes(rawSearch) ||
+      (normSearch && removeDiacritics(item.merchant).includes(normSearch)) ||
+      catLabel.toLowerCase().includes(rawSearch) ||
+      (normSearch && removeDiacritics(catLabel).includes(normSearch)) ||
+      item.category.toLowerCase().includes(rawSearch) ||
+      String(item.amount || '').includes(rawSearch);
+
     const matchStatus = !_statusFilter || item.status === _statusFilter;
     return matchSearch && matchStatus;
   }).sort((a, b) => {
@@ -98,22 +112,25 @@ function monthlyRecurringTotal(list) {
     .filter(r => r.type === 'expense' && (r.status === 'active' || r.is_active))
     .reduce((sum, r) => {
       const amt = parseNumber(r.amount);
-      if (r.frequency === 'weekly') return sum + amt * 4.345;
-      if (r.frequency === 'yearly') return sum + amt / 12;
+      const freq = r.frequency || r.recurrence || 'monthly';
+      if (freq === 'weekly') return sum + amt * 4.345;
+      if (freq === 'yearly') return sum + amt / 12;
+      if (freq === 'daily') return sum + amt * 30.4375;
       return sum + amt;
     }, 0);
 }
 
 function upcomingDueItems(list) {
-  const now = new Date();
-  const deadline = new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const deadline = new Date(today);
   deadline.setDate(deadline.getDate() + 30);
   return list
     .filter(r => (r.status === 'active' || r.is_active) && r.nextDate)
     .map(r => ({ ...r, _due: new Date(r.nextDate + 'T00:00:00') }))
-    .filter(r => r._due >= now && r._due <= deadline)
+    .filter(r => r._due >= today && r._due <= deadline)
     .sort((a, b) => a._due - b._due)
-    .map(r => ({ ...r, diffDays: Math.ceil((r._due - now) / (1000 * 60 * 60 * 24)) }));
+    .map(r => ({ ...r, diffDays: Math.ceil((r._due - today) / (1000 * 60 * 60 * 24)) }));
 }
 
 function recurringSummaryHTML(monthlyTotal) {
@@ -141,10 +158,11 @@ function upcomingDueHTML(list) {
   const rows = items.map(r => {
     const amountClass = r.type === 'income' ? 'highlight-positive' : 'highlight-negative';
     const rel = formatRelative(r.nextDate);
+    const catAvatar = getCategoryAvatarHtml(r.category, 'sm');
     return `
       <div class="recurring-upcoming-item">
         <div class="recurring-item-main">
-          <span class="recurring-item-icon" aria-hidden="true">${r.icon || '💸'}</span>
+          ${catAvatar}
           <div class="recurring-item-info">
             <span class="recurring-item-name">${escapeHtml(r.merchant)}</span>
             <span class="recurring-item-date" title="${escapeHtml(formatDateLong(r.nextDate))}">${escapeHtml(rel)} · ${escapeHtml(CATEGORY_MAP[r.category]?.labelVi || r.category)}</span>
@@ -238,8 +256,11 @@ function recurringTableHTML() {
           <rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="8" x2="21" y2="8"></line>
         </svg>
         <h4 style="margin-bottom:0.5rem;color:var(--text-primary);">Chưa có giao dịch định kỳ phù hợp</h4>
-        <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1.25rem;">Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc.</p>
-        <button type="button" class="btn-secondary" id="btn-reset-recurring-filters">Xóa bộ lọc</button>
+        <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1.25rem;">Thử điều chỉnh từ khóa tìm kiếm hoặc tạo khoản định kỳ mới.</p>
+        <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+          <button type="button" class="btn-secondary" id="btn-reset-recurring-filters">Xóa bộ lọc</button>
+          <button type="button" class="btn-add-transaction" data-action="add-recurring">+ Thêm giao dịch định kỳ</button>
+        </div>
       </div>
     </div>
 
@@ -282,9 +303,11 @@ function renderTableBody(container) {
     tbody.innerHTML = filtered.map(r => {
       const isSelected = selectedRecurringIds.has(r.id);
       const isActive = r.status === 'active' || r.is_active;
-      const freqLabel = r.frequency === 'monthly' ? 'Hàng tháng' : r.frequency === 'weekly' ? 'Hàng tuần' : 'Hàng năm';
+      const freq = r.frequency || r.recurrence || 'monthly';
+      const freqLabel = freq === 'weekly' ? 'Hàng tuần' : freq === 'yearly' ? 'Hàng năm' : freq === 'daily' ? 'Hàng ngày' : 'Hàng tháng';
       const typeClass = r.type === 'income' ? 'highlight-positive' : 'highlight-negative';
       const sign = r.type === 'income' ? '+' : '-';
+      const catAvatar = getCategoryAvatarHtml(r.category, 'sm');
 
       return `
         <tr id="recurring-row-${r.id}" class="${isSelected ? 'selected-row' : ''}">
@@ -293,7 +316,7 @@ function renderTableBody(container) {
           </td>
           <td>
             <div class="merchant-cell">
-              <div class="merchant-icon" aria-hidden="true">${r.icon || '📦'}</div>
+              ${catAvatar}
               <div class="merchant-details">
                 <span class="merchant-name">${escapeHtml(r.merchant)}</span>
               </div>
@@ -323,14 +346,16 @@ function renderTableBody(container) {
       cardsContainer.innerHTML = filtered.map(r => {
         const isSelected = selectedRecurringIds.has(r.id);
         const isActive = r.status === 'active' || r.is_active;
-        const freqLabel = r.frequency === 'monthly' ? 'Hàng tháng' : r.frequency === 'weekly' ? 'Hàng tuần' : 'Hàng năm';
+        const freq = r.frequency || r.recurrence || 'monthly';
+        const freqLabel = freq === 'weekly' ? 'Hàng tuần' : freq === 'yearly' ? 'Hàng năm' : freq === 'daily' ? 'Hàng ngày' : 'Hàng tháng';
         const typeClass = r.type === 'income' ? 'highlight-positive' : 'highlight-negative';
+        const catAvatar = getCategoryAvatarHtml(r.category, 'sm');
         return `
           <div class="tx-card ${isSelected ? 'selected' : ''}" id="recurring-card-${r.id}">
             <div class="tx-card-header">
               <div style="display:flex;align-items:center;gap:0.6rem;">
                 <input type="checkbox" class="recurring-checkbox" data-id="${r.id}" ${isSelected ? 'checked' : ''} />
-                <span style="font-size:1.2rem;" aria-hidden="true">${r.icon || '📦'}</span>
+                ${catAvatar}
                 <span class="tx-card-title">${escapeHtml(r.merchant)}</span>
               </div>
               ${actionDropdownHTML(r.id, 'recurring')}
@@ -380,21 +405,23 @@ function attachListeners(container) {
   // Add recurring button trigger
   container.addEventListener('click', e => {
     if (e.target.closest('[data-action="add-recurring"]')) {
-      showToast('Tính năng tạo giao dịch định kỳ sẽ sớm được ra mắt.', 'info');
+      openRecurringModal();
     }
   });
 
-  // Search input
+  // Search input (debounced with input & search clear event support)
   const searchEl = container.querySelector('#recurring-search');
   if (searchEl) {
     let timeout;
-    searchEl.addEventListener('input', e => {
+    const onSearchChange = e => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
-        _searchQuery = e.target.value;
+        _searchQuery = e.target.value.trim();
         renderTableBody(container);
       }, 250);
-    });
+    };
+    searchEl.addEventListener('input', onSearchChange);
+    searchEl.addEventListener('search', onSearchChange);
   }
 
   // Status filter
@@ -477,15 +504,9 @@ function attachListeners(container) {
     menuItem.closest('.action-dropdown')?.classList.remove('show');
 
     if (action === 'view-recurring') {
-      await showConfirmModal({
-        title: `Giao dịch định kỳ: ${item.merchant}`,
-        message: `Số tiền: ${formatCurrency(item.amount)}\nTần suất: ${item.frequency}\nNgày tiếp theo: ${item.nextDate}\nTrạng thái: ${item.status === 'active' ? 'Đang bật' : 'Đã tắt'}`,
-        confirmText: 'Đóng',
-        cancelText: '',
-        type: 'primary',
-      });
+      openRecurringModal(item);
     } else if (action === 'edit-recurring') {
-      showToast(`Chỉnh sửa ${item.merchant} - Tính năng đang phát triển.`, 'info');
+      openRecurringModal(item);
     } else if (action === 'duplicate-recurring') {
       const dup = { ...item, id: undefined, merchant: `${item.merchant} (Bản sao)` };
       await dataService.addRecurring(dup);

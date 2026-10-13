@@ -3,7 +3,8 @@
  * Provides instant brand recognition with authentic colors, initials, and safe deterministic fallbacks.
  */
 
-import { escapeHtml } from '../utils/format.js';
+import { escapeHtml, removeDiacritics } from '../utils/format.js';
+export { removeDiacritics };
 
 export const BANK_DEFINITIONS = [
   // 1. Vietcombank
@@ -231,21 +232,6 @@ const FALLBACK_PALETTE = [
   '#06B6D4', // Cyan
   '#E11D48', // Red
 ];
-
-/**
- * Remove Vietnamese accents and convert to lowercase for robust fuzzy matching.
- * @param {string} str
- * @returns {string}
- */
-export function removeDiacritics(str) {
-  if (!str) return '';
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .toLowerCase();
-}
 
 /**
  * Deterministic string hash (DJB2) for stable fallback colors.

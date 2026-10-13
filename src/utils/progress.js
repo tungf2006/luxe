@@ -1,6 +1,6 @@
 const THRESHOLDS = [
   { max: 69, class: 'progress-fill--ok', color: '#22C55E' },
-  { max: 89, class: 'progress-fill--warning', color: '#F59E0B' },
+  { max: 90, class: 'progress-fill--warning', color: '#F59E0B' },
   { max: 100, class: 'progress-fill--danger', color: '#EF4444' },
 ];
 

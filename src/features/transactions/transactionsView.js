@@ -6,8 +6,8 @@
  */
 
 import dataService, { computeTotals } from '../../services/dataService.js';
-import { escapeHtml, formatAmount, formatCurrency, formatDateLong, formatDateGroupHeader, formatMonthYear } from '../../utils/format.js';
-import { CATEGORIES, CATEGORY_ICONS, getCategoryLabelVi } from '../../constants/categories.js';
+import { escapeHtml, formatAmount, formatCurrency, formatDateLong, formatDateGroupHeader, formatMonthYear, removeDiacritics } from '../../utils/format.js';
+import { CATEGORIES, CATEGORY_ICONS, CATEGORY_MAP, getCategoryLabelVi, getCategoryAvatarHtml } from '../../constants/categories.js';
 import { showToast, showToastWithAction } from '../../components/ui/Toast.js';
 import { statusBadgeHTML, merchantCellHTML, categoryTagHTML, actionDropdownHTML, paymentMethodHTML } from '../../components/ui/TransactionCells.js';
 import { showConfirmModal, showCategorySelectModal } from '../../components/ui/ConfirmModal.js';
@@ -15,6 +15,7 @@ import { edit as editTransaction } from './transactionForm.js';
 import { emit } from '../../utils/eventBus.js';
 import { pageHeaderHTML } from '../../components/ui/PageHeader.js';
 import { getRoute } from '../../config/routes.js';
+import { buildCandidatesPool, initSearchSuggestions } from '../../components/ui/SearchSuggestions.js';
 
 /* --------------------------------------------------------------- *
  * Module-level state (preserved & synced with URL query)
@@ -34,15 +35,18 @@ let undoBackupTx = null;
 function readUrlParams() {
   const hash = window.location.hash || '';
   const qIdx = hash.indexOf('?');
-  if (qIdx === -1) return;
+  if (qIdx === -1) {
+    txFilters = { search: '', type: '', category: '', month: '', status: '', payment_method: '' };
+    return;
+  }
 
   const params = new URLSearchParams(hash.slice(qIdx));
-  if (params.has('search')) txFilters.search = params.get('search');
-  if (params.has('type')) txFilters.type = params.get('type');
-  if (params.has('category')) txFilters.category = params.get('category');
-  if (params.has('month')) txFilters.month = params.get('month');
-  if (params.has('status')) txFilters.status = params.get('status');
-  if (params.has('payment_method')) txFilters.payment_method = params.get('payment_method');
+  txFilters.search = params.get('search') || '';
+  txFilters.type = params.get('type') || '';
+  txFilters.category = params.get('category') || '';
+  txFilters.month = params.get('month') || '';
+  txFilters.status = params.get('status') || '';
+  txFilters.payment_method = params.get('payment_method') || '';
   if (params.has('sort')) _sortField = params.get('sort');
   if (params.has('dir')) _sortDir = params.get('dir');
   if (params.has('page')) txPage = parseInt(params.get('page'), 10) || 1;
@@ -72,12 +76,79 @@ function updateUrlParams() {
 /* --------------------------------------------------------------- *
  * Filtering & sorting
  * --------------------------------------------------------------- */
+
+/**
+ * Match a transaction against a search query.
+ * Supports:
+ * - Merchant name (case-insensitive & accent-insensitive)
+ * - Category Vietnamese label, English label, and ID slug (accent-insensitive)
+ * - Amount value (exact or substring)
+ * - Payment method (slug & Vietnamese terms: thẻ, tiền mặt, ví điện tử, chuyển khoản)
+ * - Account name & transaction notes
+ *
+ * @param {object} tx
+ * @param {string} query
+ * @returns {boolean}
+ */
+export function matchesTxSearch(tx, query) {
+  if (!query) return true;
+  const rawQuery = String(query).trim().toLowerCase();
+  if (!rawQuery) return true;
+
+  const normQuery = removeDiacritics(rawQuery);
+
+  // 1. Merchant name
+  const merchantLower = (tx.merchant || '').toLowerCase();
+  if (merchantLower.includes(rawQuery)) return true;
+  if (normQuery && removeDiacritics(merchantLower).includes(normQuery)) return true;
+
+  // 2. Category: ID slug + Vietnamese display label + English label
+  const catSlug = (tx.category || '').toLowerCase();
+  if (catSlug.includes(rawQuery) || (normQuery && removeDiacritics(catSlug).includes(normQuery))) return true;
+
+  const cat = CATEGORY_MAP[tx.category];
+  if (cat) {
+    if (cat.labelVi) {
+      const labelViLower = cat.labelVi.toLowerCase();
+      if (labelViLower.includes(rawQuery)) return true;
+      if (normQuery && removeDiacritics(labelViLower).includes(normQuery)) return true;
+    }
+    if (cat.labelEn) {
+      const labelEnLower = cat.labelEn.toLowerCase();
+      if (labelEnLower.includes(rawQuery)) return true;
+    }
+  }
+
+  // 3. Amount value
+  const amountStr = String(tx.amount || '');
+  if (amountStr.includes(rawQuery)) return true;
+
+  // 4. Payment method
+  const paymentMethod = (tx.payment_method || '').toLowerCase();
+  if (paymentMethod.includes(rawQuery)) return true;
+  if (normQuery && removeDiacritics(paymentMethod).includes(normQuery)) return true;
+
+  if (normQuery.includes('the') && paymentMethod === 'card') return true;
+  if (normQuery.includes('tien mat') && paymentMethod === 'cash') return true;
+  if (normQuery.includes('chuyen khoan') && paymentMethod === 'transfer') return true;
+  if ((normQuery.includes('vi') || normQuery.includes('momo') || normQuery.includes('zalo') || normQuery.includes('shopee')) && paymentMethod === 'ewallet') return true;
+
+  // 5. Account or note (if present)
+  if (tx.account) {
+    const accLower = String(tx.account).toLowerCase();
+    if (accLower.includes(rawQuery) || (normQuery && removeDiacritics(accLower).includes(normQuery))) return true;
+  }
+  if (tx.note) {
+    const noteLower = String(tx.note).toLowerCase();
+    if (noteLower.includes(rawQuery) || (normQuery && removeDiacritics(noteLower).includes(normQuery))) return true;
+  }
+
+  return false;
+}
+
 function getFilteredTx() {
   return _transactions.filter(tx => {
-    const search = txFilters.search.toLowerCase();
-    const matchSearch = !search ||
-      tx.merchant.toLowerCase().includes(search) ||
-      tx.category.toLowerCase().includes(search);
+    const matchSearch = matchesTxSearch(tx, txFilters.search);
     const matchType = !txFilters.type || tx.type === txFilters.type;
     const matchCat = !txFilters.category || tx.category === txFilters.category;
     const matchMonth = !txFilters.month || tx.date.startsWith(txFilters.month);
@@ -187,10 +258,7 @@ function monthOptionsHTML(transactions) {
 function statusChipsHTML() {
   // Compute counts for status quick-filter chips based on current search/category/month
   const baseList = _transactions.filter(tx => {
-    const search = txFilters.search.toLowerCase();
-    const matchSearch = !search ||
-      tx.merchant.toLowerCase().includes(search) ||
-      tx.category.toLowerCase().includes(search);
+    const matchSearch = matchesTxSearch(tx, txFilters.search);
     const matchType = !txFilters.type || tx.type === txFilters.type;
     const matchCat = !txFilters.category || tx.category === txFilters.category;
     const matchMonth = !txFilters.month || tx.date.startsWith(txFilters.month);
@@ -235,9 +303,11 @@ function statusChipsHTML() {
 function filterBarHTML() {
   return `
     <div class="tx-filter-bar" style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
-      <div class="search-input-box" role="search" style="flex:1;min-width:200px;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="search" id="tx-search" value="${escapeHtml(txFilters.search)}" placeholder="Tìm kiếm giao dịch…" aria-label="Tìm kiếm giao dịch" />
+      <div class="search-box-wrapper" id="tx-search-box-wrapper">
+        <div class="search-input-box" role="search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="search" id="tx-search" value="${escapeHtml(txFilters.search)}" placeholder="Tìm kiếm giao dịch…" aria-label="Tìm kiếm giao dịch" autocomplete="off" />
+        </div>
       </div>
       <select class="select-dropdown" id="tx-filter-type" aria-label="Lọc theo loại">
         <option value="">Tất cả loại</option>
@@ -443,7 +513,7 @@ function renderTableBody(container) {
     if (cardsContainer) {
       cardsContainer.innerHTML = paged.map(tx => {
         const isSelected = selectedTxIds.has(tx.id);
-        const icon = CATEGORY_ICONS[tx.category] || '📦';
+        const avatar = getCategoryAvatarHtml(tx.category, 'sm');
         const amountClass = tx.type === 'income' ? 'highlight-positive' : 'highlight-negative';
         const statusBadge = statusBadgeHTML(tx.status);
         const statusClass = `tx-card-${tx.status || 'completed'}`;
@@ -452,7 +522,7 @@ function renderTableBody(container) {
             <div class="tx-card-header">
               <div style="display:flex;align-items:center;gap:0.6rem;flex:1;min-width:0;">
                 <input type="checkbox" class="tx-checkbox" data-id="${tx.id}" ${isSelected ? 'checked' : ''} />
-                <span style="font-size:1.2rem;" aria-hidden="true">${icon}</span>
+                ${avatar}
                 <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;min-width:0;">
                   <span class="tx-card-title">${escapeHtml(tx.merchant)}</span>
                   ${statusBadge}
@@ -536,18 +606,35 @@ function exportCSV(txListToExport = _transactions) {
  * Event Listeners
  * --------------------------------------------------------------- */
 function attachListeners(container) {
-  // Search input (debounced)
+  // Search input (debounced with input & clear search event support + prefix suggestions)
   const searchEl = container.querySelector('#tx-search');
+  const searchWrapper = container.querySelector('#tx-search-box-wrapper') || searchEl?.parentElement;
   if (searchEl) {
     let timeout;
-    searchEl.addEventListener('input', e => {
+    const onSearchChange = e => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
-        txFilters.search = e.target.value.toLowerCase();
+        txFilters.search = e.target.value.trim();
         txPage = 1;
         renderTableBody(container);
       }, 250);
-    });
+    };
+    searchEl.addEventListener('input', onSearchChange);
+    searchEl.addEventListener('search', onSearchChange);
+
+    if (searchWrapper) {
+      initSearchSuggestions({
+        inputEl: searchEl,
+        containerEl: searchWrapper,
+        getCandidates: () => buildCandidatesPool(_transactions),
+        onSelect: selectedText => {
+          clearTimeout(timeout);
+          txFilters.search = selectedText.trim();
+          txPage = 1;
+          renderTableBody(container);
+        },
+      });
+    }
   }
 
   // Type filter

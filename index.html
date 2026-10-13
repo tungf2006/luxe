@@ -28,6 +28,9 @@
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase-min.js"></script>
 
+  <!-- Chart.js Visualization Library -->
+  <script src="src/vendor/chart.umd.min.js"></script>
+
   <!-- Environment Configuration -->
   <!-- Replace these with your Supabase project credentials.
        See .env.example for instructions.
@@ -36,7 +39,7 @@
     window.SUPABASE_CONFIG = {
       url: "https://uroencgkyifmtxmvwqew.supabase.co",
       anonKey: "sb_publishable_6bIP_sv9jKePjvUVI9oTQg_WsVmyQO6",
-      mockMode: true,
+      mockMode: false,
     };
   </script>
 </head>
@@ -87,44 +90,63 @@
           <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Mở điều hướng"
             data-i18n-aria="app.aria.openNav" aria-expanded="false">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-              stroke-linecap="round" stroke-linejoin="round">
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="3" y1="12" x2="21" y2="12"></line>
               <line x1="3" y1="6" x2="21" y2="6"></line>
               <line x1="3" y1="18" x2="21" y2="18"></line>
             </svg>
           </button>
-          <nav id="breadcrumb" class="breadcrumb" aria-label="Breadcrumb">
+          <nav id="breadcrumb" class="breadcrumb is-root-page" aria-label="Breadcrumb">
             <ol class="breadcrumb-list">
-              <li class="breadcrumb-item"><a href="#" class="breadcrumb-link" data-page="dashboard" id="breadcrumb-home"
-                  aria-label="Trang chủ">Luxe</a></li>
-              <li class="breadcrumb-separator" aria-hidden="true"></li>
-              <li class="breadcrumb-current" id="breadcrumb-current" aria-current="page">Tổng quan</li>
+              <li class="breadcrumb-item breadcrumb-home-item" style="display: none;">
+                <a href="#" class="breadcrumb-link" data-page="dashboard" id="breadcrumb-home" aria-label="Trang chủ Luxe">
+                  <span class="breadcrumb-app-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                      <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                  </span>
+                  <span class="breadcrumb-app-name">Luxe</span>
+                </a>
+              </li>
+              <li class="breadcrumb-separator" style="display: none;" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </li>
+              <li class="breadcrumb-item breadcrumb-current-item" aria-current="page">
+                <h1 class="page-title-header" id="page-title-header" data-i18n="nav.dashboard">Tổng quan</h1>
+              </li>
             </ol>
           </nav>
-          <h1 class="page-title-header" id="page-title-header" data-i18n="nav.dashboard">Tổng quan</h1>
         </div>
 
         <div class="header-actions">
-          <!-- Global search -->
-          <div class="topbar-search" role="search">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input type="search" id="topbar-search-input" placeholder="Tìm kiếm..." aria-label="Tìm kiếm toàn cục"
-              data-i18n-placeholder="app.topbarSearch" data-i18n-aria="app.topbarSearchAria" />
+          <!-- Guest Mode Indicator & Clear Button -->
+          <div class="guest-mode-indicator" id="guest-mode-indicator" role="status" aria-label="Chế độ trải nghiệm" style="display: none;">
+            <span class="guest-indicator-dot" aria-hidden="true"></span>
+            <span class="guest-indicator-text">Chế độ trải nghiệm – Dữ liệu mẫu</span>
+            <button type="button" class="btn-clear-guest-data" id="btn-clear-guest-data" title="Xoá dữ liệu mẫu để thử nghiệm như tài khoản mới">
+              Xoá dữ liệu mẫu
+            </button>
           </div>
 
-          <!-- Bell notification -->
-          <button class="topbar-bell" id="notif-btn" aria-label="Thông báo" data-i18n-aria="app.notifications">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
-            <span class="topbar-bell-badge" id="notif-badge" aria-label="3 thông báo chưa đọc">3</span>
-          </button>
+          <!-- Bell notification & dropdown -->
+          <div class="notif-menu" id="notif-menu">
+            <button class="topbar-bell" id="notif-btn" aria-label="Thông báo" data-i18n-aria="app.notifications"
+              aria-haspopup="dialog" aria-expanded="false" aria-controls="notif-dropdown">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              <span class="topbar-bell-badge" id="notif-badge" aria-label="3 thông báo chưa đọc">3</span>
+            </button>
+
+            <!-- Notification Dropdown Panel -->
+            <div class="notif-dropdown" id="notif-dropdown" role="dialog" aria-label="Trung tâm thông báo" aria-hidden="true">
+            </div>
+          </div>
 
           <!-- Avatar + name + dropdown -->
           <div class="user-menu" id="user-menu">
@@ -137,7 +159,7 @@
                   style="width:100%;height:100%;background:linear-gradient(135deg,#22C55E,#16A34A);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:0.75rem;color:white;">
                 </div>
               </div>
-              <span id="user-name" class="user-display-name">Luxe User</span>
+              <span id="user-name" class="user-display-name" title="Luxe User">Luxe User</span>
               <svg class="user-menu-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
                 aria-hidden="true">
@@ -198,7 +220,7 @@
 
     <!-- ===== MOBILE FLOATING ACTION BUTTON (FAB) ===== -->
     <button class="mobile-fab-btn" id="mobile-fab-btn" data-open-modal="add-tx-modal" aria-label="Thêm giao dịch" data-i18n-aria="app.aria.addTransaction">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <line x1="12" y1="5" x2="12" y2="19"></line>
         <line x1="5" y1="12" x2="19" y2="12"></line>
       </svg>

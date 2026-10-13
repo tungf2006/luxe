@@ -49,7 +49,7 @@ export function renderMobileBottomNav() {
   html += `
     <li>
       <button type="button" class="nav-link mobile-nav-item" id="mobile-nav-more" aria-label="Xem thêm" data-i18n-aria="app.aria.viewMore" aria-haspopup="menu" aria-expanded="false">
-        <span class="mobile-nav-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></span>
+        <span class="mobile-nav-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></span>
         <span class="mobile-nav-label" data-i18n="app.aria.viewMore">Thêm</span>
       </button>
     </li>`;

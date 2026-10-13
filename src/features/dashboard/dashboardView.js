@@ -10,8 +10,16 @@ import dataService, {
   getMonthlyCashFlow,
   generateInsight,
 } from '../../services/dataService.js';
-import { AreaChart } from '../../components/charts/AreaChart.js';
-import { kpiCardHTML } from '../../components/ui/KPICard.js';
+import { getPeriodHighlights, generatePeriodSuggestions } from './periodInsights.js';
+import { getDashboardStats, normalizeDate } from './dashboardStats.js';
+import { renderPeriodSelector, attachPeriodSelectorListeners, getPeriodRange } from '../../components/ui/PeriodSelector.js';
+import {
+  renderSpendingChart,
+  destroySpendingChart,
+  computeDailySeries,
+  getSpendingChartSubtitle,
+} from '../../components/charts/spendingChart.js';
+import { kpiCardHTML, initKpiTooltips } from '../../components/ui/KPICard.js';
 import { panelHeaderHTML } from '../../components/ui/PanelHeader.js';
 import { renderChartSkeleton, renderEmptyState } from '../../components/ui/UIStates.js';
 import {
@@ -20,6 +28,7 @@ import {
 import {
   formatCurrency,
   formatAmount,
+  formatCompact,
   formatCompactCurrency,
   escapeHtml,
   getTrend,
@@ -28,8 +37,15 @@ import {
   formatMonthYear,
   formatRelative,
   getLocalDateString,
+  getRecentDateGroupLabel,
+  getDayNameVi,
+  getTransactionAmountClass,
+  getTransactionType,
+  isVoidTransaction,
 } from '../../utils/format.js';
-import { CATEGORIES, getCategoryLabelVi, getCategoryIcon } from '../../constants/categories.js';
+import { getCurrentUser } from '../../services/authService.js';
+import { CATEGORIES, CATEGORY_SVGS, getCategoryLabelVi, getCategoryIcon, getCategoryAvatarHtml } from '../../constants/categories.js';
+import { edit as editTransaction } from '../transactions/transactionForm.js';
 import { emit } from '../../utils/eventBus.js';
 import { t } from '../../utils/i18n.js';
 import { getBudgetProgressClass, getBudgetProgressColor } from '../../utils/progress.js';
@@ -73,9 +89,10 @@ const DASHBOARD_ICONS = {
 };
 
 /* ---------------------------------------------------------------- *
- * Module-scoped state for chart toggles
+ * Module-scoped state for chart toggles and page period
  * ---------------------------------------------------------------- */
-let _period = 'week';
+let _period = '7d';
+let _periodState = getPeriodRange('thisMonth');
 let _transactions = [];
 
 /* ---------------------------------------------------------------- *
@@ -130,7 +147,7 @@ function daysUntilPay(payDayStr, transactions) {
  * @param {string} pathFrag
  */
 function kpiIcon(pathFrag) {
-  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${pathFrag}</svg>`;
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${pathFrag}</svg>`;
 }
 
 /**
@@ -144,19 +161,20 @@ function kpiIcon(pathFrag) {
  *   - Expenses, whose increase is undesirable:
  *     goodDirection = 'down' ? downward = green, upward = red
  *
- * When there is no prior data to compare (a missing or zero baseline — which
- * would otherwise trigger a division-by-zero "+100%"), a muted
- * "Chưa có dữ liệu so sánh" fallback is rendered instead.
+ * When there is no prior data to compare (a missing or zero baseline or days < 7),
+ * a muted "—" or "Chưa đủ dữ liệu so sánh" fallback is rendered instead.
  *
- * @param {{direction:'up'|'down'|'flat',change:number}|null} trend  null when no prior data (getTrend returns null)
+ * @param {{direction:'up'|'down'|'flat',change:number}|null} trend
  * @param {Object} [opts]
  * @param {string} [opts.suffix='%']        Unit suffix ('%' or 'pp')
  * @param {'up'|'down'} [opts.goodDirection='up']  Which direction is "good" for this KPI
+ * @param {number} [opts.days=0]            Number of elapsed days in current period
  * @returns {string}
  */
-function trendBadgeHTML(trend, { suffix = '%', goodDirection = 'up' } = {}) {
+function trendBadgeHTML(trend, { suffix = '%', goodDirection = 'up', days = 0 } = {}) {
   if (!trend) {
-    return `<span class="trend-badge trend-neutral" aria-label="${t('dashboard.kpi.noComparison')}">${t('dashboard.kpi.noComparison')}</span>`;
+    const fallbackTitle = days > 0 && days < 7 ? 'Chưa đủ dữ liệu so sánh (cần ≥ 7 ngày)' : t('dashboard.kpi.noComparison');
+    return `<span class="trend-badge trend-neutral" title="${escapeHtml(fallbackTitle)}" aria-label="${escapeHtml(fallbackTitle)}">—</span>`;
   }
   if (trend.direction === 'flat') {
     return `<span class="trend-badge trend-neutral" aria-label="${t('dashboard.kpi.flat')}">—</span>`;
@@ -180,69 +198,136 @@ function trendBadgeHTML(trend, { suffix = '%', goodDirection = 'up' } = {}) {
  * Section builders
  * ---------------------------------------------------------------- */
 
-function heroHeaderHTML() {
+/**
+ * Resolve display name for user greeting.
+ * @param {Object} [settings]
+ * @returns {string}
+ */
+function getUserDisplayName(settings) {
+  const user = getCurrentUser();
+  if (user) {
+    const name = user.user_metadata?.display_name ||
+                 user.user_metadata?.full_name ||
+                 user.user_metadata?.name ||
+                 (user.email ? user.email.split('@')[0] : null);
+    if (name) return name;
+  }
+  const nameEl = document.getElementById('user-name');
+  if (nameEl && nameEl.textContent && nameEl.textContent.trim()) {
+    const text = nameEl.textContent.trim();
+    if (text) return text;
+  }
+  if (settings?.firstName) {
+    return settings.firstName;
+  }
+  return 'Alex';
+}
+
+/**
+ * Compact Page Header (≤ 72px):
+ * Greeting "Xin chào, {tên}", Vietnamese date, and PeriodSelector (Task 4).
+ * @param {string} userName
+ * @returns {string}
+ */
+function dashboardHeaderHTML(userName) {
+  const d = new Date();
+  const dayName = getDayNameVi(d);
+  const dateLong = formatDateLong(getLocalDateString(d));
+  const fullDateText = dayName ? `${dayName}, ${dateLong}` : dateLong;
+
   return `
-    <div class="hero-header">
-      <div class="hero-tagline-wrapper">
-        <span class="hero-tagline-pulse" aria-hidden="true"></span>
-        <span class="hero-tagline-text">${t('dashboard.hero.tagline', { date: nowFormatted() })}</span>
-       </div>
-       <h1 class="hero-headline">${t('dashboard.hero.headline')}</h1>
-       <p class="hero-subheadline">${t('dashboard.hero.subheadline')}</p>
-    </div>
+    <header class="dashboard-page-header" id="dashboard-page-header">
+      <div class="dashboard-header-greeting">
+        <h1 class="dashboard-greeting-title hero-headline">
+          Xin chào, <span class="dashboard-user-name">${escapeHtml(userName)}</span>
+        </h1>
+        <p class="dashboard-header-date">
+          <svg class="dashboard-date-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span>${escapeHtml(fullDateText)}</span>
+        </p>
+      </div>
+      <div class="dashboard-header-actions">
+        ${renderPeriodSelector(_periodState)}
+      </div>
+    </header>
   `;
 }
 
-function kpiGridHTML(totalBalance, monthTotals, lastMonthTotals, savingsRate, lastMonthSavingsRate, netChange, compareRange) {
-  const balanceTrend = getTrend(netChange, lastMonthTotals.income - lastMonthTotals.expenses);
-  const incomeTrend = getTrend(monthTotals.income, lastMonthTotals.income);
-  const expenseTrend = getTrend(monthTotals.expenses, lastMonthTotals.expenses);
-  const savingsTrend = getTrend(savingsRate, lastMonthSavingsRate);
+function kpiGridHTML({ totalBalance = 0, income = 0, expenses = 0, savingsRate = 0, compareRange = '', deltas = {}, days = 0, loading = false } = {}) {
+  const compareLabel = days < 7
+    ? 'Chưa đủ dữ liệu so sánh'
+    : t('dashboard.kpi.compareRange', { range: compareRange });
 
-  const compareLabel = t('dashboard.kpi.compareRange', { range: compareRange });
+  // Format full vs compact values for monetary metrics (Full by default, compact when space is tight)
+  const fullBalance = formatCurrency(totalBalance, { asHtml: true });
+  const compactBalance = formatCompact(totalBalance, { asHtml: true });
+  const fullIncome = formatCurrency(income, { asHtml: true });
+  const compactIncome = formatCompact(income, { asHtml: true });
+  const fullExpenses = formatCurrency(expenses, { asHtml: true });
+  const compactExpenses = formatCompact(expenses, { asHtml: true });
+
+  const balanceValueHtml = `<span class="val-full" title="${escapeHtml(formatCurrency(totalBalance))}">${fullBalance}</span><span class="val-compact" title="${escapeHtml(formatCurrency(totalBalance))}">${compactBalance}</span>`;
+  const incomeValueHtml = `<span class="val-full" title="${escapeHtml(formatCurrency(income))}">${fullIncome}</span><span class="val-compact" title="${escapeHtml(formatCurrency(income))}">${compactIncome}</span>`;
+  const expensesValueHtml = `<span class="val-full" title="${escapeHtml(formatCurrency(expenses))}">${fullExpenses}</span><span class="val-compact" title="${escapeHtml(formatCurrency(expenses))}">${compactExpenses}</span>`;
+
+  // Savings rate threshold colors: ≥20% xanh (green), 0-20% vàng (amber), <0% đỏ (red)
+  let savingsValueHtml = '—';
+  let savingsClass = 'highlight-positive';
+  if (savingsRate != null && !isNaN(savingsRate) && (income > 0 || expenses > 0)) {
+    savingsValueHtml = `${savingsRate.toFixed(1)}%`;
+    if (savingsRate >= 20) {
+      savingsClass = 'highlight-positive'; // xanh (≥20%)
+    } else if (savingsRate >= 0) {
+      savingsClass = 'highlight-warning';  // vàng (0-20%)
+    } else {
+      savingsClass = 'highlight-negative'; // đỏ (<0%)
+    }
+  }
 
   const kpis = [
     {
       id: 'kpi-total-balance',
       title: t('dashboard.kpi.totalBalance'),
-      value: formatCompactCurrency(totalBalance),
-      iconSvg: kpiIcon(DASHBOARD_ICONS.balance),
+      value: balanceValueHtml,
+      valueClass: 'auto-compact highlight-neutral',
       goodDirection: 'up',
       tooltip: t('dashboard.kpi.totalBalanceTooltip'),
-      trend: balanceTrend,
+      trend: deltas?.net || null,
       suffix: '%',
     },
     {
       id: 'kpi-income',
       title: t('dashboard.kpi.income'),
-      value: formatCompactCurrency(monthTotals.income),
-      valueClass: 'highlight-positive',
-      iconSvg: kpiIcon(DASHBOARD_ICONS.income),
+      value: incomeValueHtml,
+      valueClass: 'auto-compact highlight-positive',
       goodDirection: 'up',
       tooltip: t('dashboard.kpi.incomeTooltip'),
-      trend: incomeTrend,
+      trend: deltas?.income || null,
       suffix: '%',
     },
     {
       id: 'kpi-expenses',
       title: t('dashboard.kpi.expenses'),
-      value: formatCompactCurrency(monthTotals.expenses),
-      valueClass: 'highlight-negative',
-      iconSvg: kpiIcon(DASHBOARD_ICONS.expense),
+      value: expensesValueHtml,
+      valueClass: 'auto-compact highlight-negative',
       goodDirection: 'down',
       tooltip: t('dashboard.kpi.expensesTooltip'),
-      trend: expenseTrend,
+      trend: deltas?.expense || null,
       suffix: '%',
     },
     {
       id: 'kpi-savings',
       title: t('dashboard.kpi.savingsRate'),
-      value: `${savingsRate.toFixed(1)}%`,
-      valueClass: 'highlight-positive',
-      iconSvg: kpiIcon(DASHBOARD_ICONS.savings),
+      value: savingsValueHtml,
+      valueClass: savingsClass,
       goodDirection: 'up',
       tooltip: t('dashboard.kpi.savingsRateTooltip'),
-      trend: savingsTrend,
+      trend: deltas?.savingsRate || null,
       suffix: 'pp',
     },
   ];
@@ -254,9 +339,9 @@ function kpiGridHTML(totalBalance, monthTotals, lastMonthTotals, savingsRate, la
         title: kpi.title,
         value: kpi.value,
         valueClass: kpi.valueClass,
-        iconSvg: kpi.iconSvg,
         tooltip: kpi.tooltip,
-        footerHtml: `${trendBadgeHTML(kpi.trend, { suffix: kpi.suffix, goodDirection: kpi.goodDirection })}<span class="trend-label" title="${escapeHtml(compareRange)}">${compareLabel}</span>`,
+        loading,
+        footerHtml: `${trendBadgeHTML(kpi.trend, { suffix: kpi.suffix, goodDirection: kpi.goodDirection, days })}<span class="trend-label" title="${escapeHtml(compareRange)}">${compareLabel}</span>`,
       })).join('')}
     </div>
   `;
@@ -267,7 +352,7 @@ function getChartAreaContent(state, chartHtml, period) {
     return renderChartSkeleton();
   }
   if (state === 'empty') {
-    const emptyIcon = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';
+    const emptyIcon = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';
     return renderEmptyState({
       icon: emptyIcon,
       title: t('dashboard.chartEmpty.title'),
@@ -279,60 +364,230 @@ function getChartAreaContent(state, chartHtml, period) {
   return chartHtml;
 }
 
-function spendingChartPanelHTML({ chartHtml, period, incomeTotal, expenseTotal, isEmpty = false }) {
+function spendingChartPanelHTML({ period, subtitle, incomeTotal, expenseTotal, isEmpty = false }) {
   const showBadges = !isEmpty;
 
   return `
-    <div class="glass-panel" id="spending-overview-panel">
+    <div class="glass-panel spending-overview-panel" id="spending-overview-panel">
       ${panelHeaderHTML({
          title: t('dashboard.spending.title'),
-         subtitle: t('dashboard.spending.subtitle'),
+         subtitle: subtitle,
          iconSvg: DASHBOARD_ICONS.chart,
         actionHtml: `
-          <div class="filter-pills" role="group" aria-label="Time period">
-            <button class="filter-btn ${period === 'week' ? 'active' : ''}" data-chart-period="week" aria-pressed="${period === 'week'}">${t('dashboard.spending.week')}</button>
-            <button class="filter-btn ${period === 'month' ? 'active' : ''}" data-chart-period="month" aria-pressed="${period === 'month'}">${t('dashboard.spending.month')}</button>
+          <div class="filter-pills" role="group" aria-label="Khung thời gian biểu đồ">
+            <button class="filter-btn ${period === '7d' ? 'active' : ''}" data-chart-period="7d" aria-pressed="${period === '7d'}">7 ngày</button>
+            <button class="filter-btn ${period === '30d' ? 'active' : ''}" data-chart-period="30d" aria-pressed="${period === '30d'}">30 ngày</button>
+            <button class="filter-btn ${period === 'period' ? 'active' : ''}" data-chart-period="period" aria-pressed="${period === 'period'}">Theo kỳ</button>
           </div>
         `,
       })}
       ${showBadges ? `
       <div class="chart-summary-badges">
         <div class="chart-summary-item">
-          <span class="chart-color-dot purple" aria-hidden="true"></span>
+          <span class="chart-color-dot income" aria-hidden="true"></span>
           <span class="chart-summary-label">${t('dashboard.spending.incomeLabel')}</span>
-          <span class="chart-summary-val" id="chart-summary-income">${formatCurrency(incomeTotal || 0)}</span>
+          <span class="chart-summary-val" id="chart-summary-income">${formatCurrency(incomeTotal || 0, { asHtml: true })}</span>
         </div>
         <div class="chart-summary-item">
-          <span class="chart-color-dot cyan" aria-hidden="true"></span>
+          <span class="chart-color-dot expense" aria-hidden="true"></span>
           <span class="chart-summary-label">${t('dashboard.spending.expenseLabel')}</span>
-          <span class="chart-summary-val" id="chart-summary-expenses">${formatCurrency(expenseTotal || 0)}</span>
+          <span class="chart-summary-val" id="chart-summary-expenses">${formatCurrency(expenseTotal || 0, { asHtml: true })}</span>
         </div>
       </div>
       ` : ''}
       <div id="spending-chart-container">
-        ${chartHtml}
+        ${isEmpty ? `
+          <div class="chart-empty-state">
+            <div class="chart-empty-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
+            </div>
+            <h4 class="chart-empty-title">Chưa có giao dịch trong kỳ</h4>
+            <p class="chart-empty-desc">Thêm thu nhập hoặc chi phí để theo dõi biến động tài chính.</p>
+            <button type="button" class="btn btn-primary" id="chart-empty-add-tx">
+              Thêm giao dịch
+            </button>
+          </div>
+        ` : `
+          <div class="spending-chart-wrapper">
+            <canvas id="spending-chart-canvas" role="img" aria-label="Biểu đồ thu nhập và chi phí"></canvas>
+          </div>
+        `}
       </div>
     </div>
   `;
 }
 
+/**
+ * Render monochrome category SVG icon (strictly zero emoji).
+ * @param {string} categoryId
+ * @returns {string}
+ */
+function getCategoryMonochromeSvgHtml(categoryId) {
+  const svg = CATEGORY_SVGS[categoryId] || CATEGORY_SVGS.other;
+  return `
+    <span class="recent-tx-cat-icon" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        ${svg}
+      </svg>
+    </span>
+  `;
+}
+
+/**
+ * Render status badge with tooltip explanation. Only renders for non-completed statuses.
+ * @param {'completed'|'pending'|'failed'|'cancelled'} status
+ * @returns {string}
+ */
+function getRecentTxStatusBadgeHtml(status) {
+  if (!status || status === 'completed') {
+    return '';
+  }
+
+  if (status === 'pending') {
+    return `
+      <span class="status-badge status-badge-pending" role="status" aria-label="Đang chờ xử lý" title="Giao dịch đang chờ xử lý từ ngân hàng hoặc ví điện tử">
+        <span class="status-pulse-dot" aria-hidden="true"></span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Đang chờ</span>
+      </span>
+    `;
+  }
+
+  if (status === 'failed') {
+    return `
+      <span class="status-badge status-badge-failed" role="status" aria-label="Thất bại" title="Giao dịch thất bại / chưa hoàn tất thanh toán">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+        <span>Thất bại</span>
+      </span>
+    `;
+  }
+
+  if (status === 'cancelled') {
+    return `
+      <span class="status-badge status-badge-cancelled" role="status" aria-label="Đã huỷ" title="Giao dịch đã bị người dùng hoặc hệ thống huỷ">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+        </svg>
+        <span>Đã huỷ</span>
+      </span>
+    `;
+  }
+
+  return '';
+}
+
 function recentTransactionsHTML(recentTx) {
-  const emptyIcon = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
-  const rows = recentTx.length === 0
-        ? `<tr><td colspan="4" class="empty-state-cell"><span class="empty-state-icon" aria-hidden="true">${emptyIcon}</span><p style="margin-top:0.5rem;">${t('dashboard.recentTx.empty')}</p></td></tr>`
-        : recentTx.map(tx => {
-            const rel = formatRelative(tx.date);
-            return `
-            <tr>
-              <td>${merchantCellHTML(tx)}</td>
-              <td><span class="category-tag">${escapeHtml(getCategoryLabelVi(tx.category) || tx.category)}</span></td>
-              <td style="color:var(--text-secondary);font-size:0.85rem;" title="${escapeHtml(formatDateLong(tx.date))}">${escapeHtml(rel)}</td>
-              <td class="table-amount ${tx.type === 'income' ? 'highlight-positive' : 'highlight-negative'}">
-                ${formatAmount(tx.amount, tx.type)}
-              </td>
-            </tr>
-          `;
-          }).join('');
+  const emptyIcon = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+
+  if (!recentTx || recentTx.length === 0) {
+    return `
+      <div class="glass-panel" id="recent-tx-panel">
+        ${panelHeaderHTML({
+           title: t('dashboard.recentTx.title'),
+           subtitle: t('dashboard.recentTx.subtitle'),
+           iconSvg: DASHBOARD_ICONS.receipt,
+           actionHtml: `<button type="button" class="view-all-link" data-nav="transactions" aria-label="${t('dashboard.recentTx.viewAllAria')}">${t('dashboard.recentTx.viewAll')} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>`,
+        })}
+        <div class="transactions-table-wrapper">
+          <table class="luxe-table" id="recent-tx-table" aria-label="Recent transactions">
+            <thead>
+              <tr>
+                <th scope="col" class="recent-tx-th-merchant">${t('dashboard.recentTx.headers.transaction', 'Giao dịch')}</th>
+                <th scope="col" class="recent-tx-th-status">${t('dashboard.recentTx.headers.status', 'Trạng thái')}</th>
+                <th scope="col" class="recent-tx-th-amount" style="text-align:right">${t('dashboard.recentTx.headers.amount', 'Số tiền')}</th>
+              </tr>
+            </thead>
+            <tbody id="recent-tx-tbody">
+              <tr>
+                <td colspan="3" class="empty-state-cell" style="text-align:center; padding: 2.25rem 1rem;">
+                  <span class="empty-state-icon" aria-hidden="true">${emptyIcon}</span>
+                  <p style="margin-top:0.5rem; color: var(--text-muted);">${t('dashboard.recentTx.empty', 'Chưa có giao dịch')}</p>
+                  <button type="button" class="btn btn-primary btn-sm" id="btn-empty-add-tx" data-open-modal="add-tx-modal" style="margin-top:0.75rem;">
+                    Thêm giao dịch đầu tiên
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // Strictly maximum 6 transactions
+  const displayTx = recentTx.slice(0, 6);
+
+  // Group by date
+  const dateGroups = [];
+  const groupMap = new Map();
+
+  for (const tx of displayTx) {
+    const dateKey = (tx.date || '').slice(0, 10);
+    if (!groupMap.has(dateKey)) {
+      const group = {
+        date: dateKey,
+        label: getRecentDateGroupLabel(dateKey),
+        transactions: [],
+      };
+      groupMap.set(dateKey, group);
+      dateGroups.push(group);
+    }
+    groupMap.get(dateKey).transactions.push(tx);
+  }
+
+  const groupRowsHtml = dateGroups.map(group => {
+    const groupHeaderHtml = `
+      <tr class="recent-tx-group-row">
+        <td colspan="3" class="recent-tx-group-header">
+          <div class="recent-tx-group-title">
+            <span class="recent-tx-group-badge">${escapeHtml(group.label)}</span>
+          </div>
+        </td>
+      </tr>
+    `;
+
+    const txRowsHtml = group.transactions.map(tx => {
+      const isVoid = isVoidTransaction(tx);
+      const rowStatusClass = `tx-row-${tx.status || 'completed'}`;
+      const amountClass = getTransactionAmountClass(tx);
+      const statusBadge = getRecentTxStatusBadgeHtml(tx.status);
+      const hasStatusBadge = Boolean(statusBadge);
+
+      return `
+        <tr class="recent-tx-row ${rowStatusClass} ${isVoid ? 'is-void' : ''} ${hasStatusBadge ? 'has-status-badge' : 'no-status-badge'}"
+            data-recent-tx-id="${escapeHtml(String(tx.id))}"
+            role="button"
+            tabindex="0"
+            aria-label="${escapeHtml(tx.merchant)} - ${formatAmount(tx.amount, getTransactionType(tx))}">
+          <td class="recent-tx-cell-merchant">
+            ${getCategoryMonochromeSvgHtml(tx.category)}
+            <div class="recent-tx-merchant-info">
+              <div class="recent-tx-title" title="${escapeHtml(tx.merchant)}">${escapeHtml(tx.merchant)}</div>
+              <div class="recent-tx-subline">${escapeHtml(getCategoryLabelVi(tx.category) || tx.category)}</div>
+            </div>
+          </td>
+          <td class="recent-tx-cell-status">
+            ${statusBadge}
+          </td>
+          <td class="recent-tx-cell-amount table-amount ${amountClass}">
+            ${formatAmount(tx.amount, getTransactionType(tx), { asHtml: true })}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    return groupHeaderHtml + txRowsHtml;
+  }).join('');
 
   return `
     <div class="glass-panel" id="recent-tx-panel">
@@ -340,20 +595,19 @@ function recentTransactionsHTML(recentTx) {
          title: t('dashboard.recentTx.title'),
          subtitle: t('dashboard.recentTx.subtitle'),
          iconSvg: DASHBOARD_ICONS.receipt,
-          actionHtml: `<button type="button" class="view-all-link" data-nav="transactions" aria-label="${t('dashboard.recentTx.viewAllAria')}">${t('dashboard.recentTx.viewAll')} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>`,
+         actionHtml: `<button type="button" class="view-all-link" data-nav="transactions" aria-label="${t('dashboard.recentTx.viewAllAria')}">${t('dashboard.recentTx.viewAll')} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>`,
       })}
       <div class="transactions-table-wrapper">
         <table class="luxe-table" id="recent-tx-table" aria-label="Recent transactions">
           <thead>
             <tr>
-<th scope="col">${t('dashboard.recentTx.headers.merchant')}</th>
-              <th scope="col">${t('dashboard.recentTx.headers.category')}</th>
-              <th scope="col">${t('dashboard.recentTx.headers.date')}</th>
-              <th scope="col" style="text-align:right">${t('dashboard.recentTx.headers.amount')}</th>
+              <th scope="col" class="recent-tx-th-merchant">${t('dashboard.recentTx.headers.transaction', 'Giao dịch')}</th>
+              <th scope="col" class="recent-tx-th-status">${t('dashboard.recentTx.headers.status', 'Trạng thái')}</th>
+              <th scope="col" class="recent-tx-th-amount" style="text-align:right">${t('dashboard.recentTx.headers.amount', 'Số tiền')}</th>
             </tr>
           </thead>
           <tbody id="recent-tx-tbody">
-            ${rows}
+            ${groupRowsHtml}
           </tbody>
         </table>
       </div>
@@ -362,112 +616,348 @@ function recentTransactionsHTML(recentTx) {
 }
 
 function budgetProgressHTML(budgets) {
-  if (budgets.length === 0) {
-    const emptyWalletIcon = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
+  // Only display categories that have an active budget limit > 0
+  const budgeted = (budgets || []).filter(b => (b.budget || b.limit || 0) > 0);
+  if (budgeted.length === 0) {
+    const emptyWalletIcon = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
     return `
       <div class="glass-panel" id="budget-progress-panel">
-        ${panelHeaderHTML({ title: t('dashboard.budgetProgress.title'), subtitle: nowFormatted(), iconSvg: DASHBOARD_ICONS.wallet })}
-        <div class="empty-state"><div class="empty-state-content"><span class="empty-state-icon">${emptyWalletIcon}</span><p>${t('dashboard.budgetProgress.empty')}</p></div></div>
+        ${panelHeaderHTML({
+          title: t('dashboard.budgetProgress.title'),
+          subtitle: nowFormatted(),
+          iconSvg: DASHBOARD_ICONS.wallet,
+          actionHtml: '<button type="button" class="view-all-link" data-nav="budgets" aria-label="' + t('dashboard.budgetProgress.manageAria') + '">' + t('dashboard.budgetProgress.manage') + ' <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>',
+        })}
+        <div class="budget-empty-state">
+          <div class="budget-empty-icon" aria-hidden="true">${emptyWalletIcon}</div>
+          <h4 class="budget-empty-title">Chưa có ngân sách</h4>
+          <p class="budget-empty-desc">Thiết lập hạn mức chi tiêu để kiểm soát ngân sách theo từng danh mục.</p>
+          <button type="button" class="btn btn-primary btn-sm budget-empty-cta" data-nav="budgets">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Tạo ngân sách
+          </button>
+        </div>
       </div>
     `;
   }
 
-  const items = budgets.map(b => {
-    const pct = Math.min(Math.round((b.spent / b.limit) * 100), 100);
-    const rawPct = Math.round((b.spent / b.limit) * 100);
+  // 1. Calculate overall totals across all budgeted categories
+  const totalSpent = budgeted.reduce((sum, b) => sum + (b.spent || 0), 0);
+  const totalPending = budgeted.reduce((sum, b) => sum + (b.pending || 0), 0);
+  const totalLimit = budgeted.reduce((sum, b) => sum + (b.budget || b.limit || 0), 0);
+  const totalRemaining = totalLimit - totalSpent;
+  const isTotalOver = totalRemaining < 0;
+
+  const totalRawPct = totalLimit > 0 ? Math.round((totalSpent / totalLimit) * 100) : 0;
+  const totalClampedPct = Math.min(totalRawPct, 100);
+  const totalConfirmedSpent = Math.max(0, totalSpent - totalPending);
+  const totalConfirmedPct = totalLimit > 0 ? Math.min(100, Math.round((totalConfirmedSpent / totalLimit) * 100)) : 0;
+  const totalPendingPct = totalLimit > 0 ? Math.min(100 - totalConfirmedPct, Math.round((totalPending / totalLimit) * 100)) : 0;
+  const totalFillClass = getBudgetProgressClass(totalRawPct);
+
+  // 2. Sort by % descending
+  const sortedBudgeted = [...budgeted].map(b => {
+    const category = b.categoryId || b.category;
+    const limit = b.budget != null ? b.budget : (b.limit || 0);
+    const spent = b.spent || 0;
+    const pending = b.pending || 0;
+    const rawPct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+    return {
+      ...b,
+      category,
+      limit,
+      spent,
+      pending,
+      rawPct,
+    };
+  }).sort((a, b) => b.rawPct - a.rawPct);
+
+  // 3. Take at most 5 items
+  const displayItems = sortedBudgeted.slice(0, 5);
+
+  const items = displayItems.map(b => {
+    const { category, limit, spent, pending, rawPct } = b;
+    const clampedPct = Math.min(rawPct, 100);
+    const confirmedSpent = Math.max(0, spent - pending);
+    const confirmedPct = limit > 0 ? Math.min(100, Math.round((confirmedSpent / limit) * 100)) : 0;
+    const pendingPct = limit > 0 ? Math.min(100 - confirmedPct, Math.round((pending / limit) * 100)) : 0;
+
+    const remaining = limit - spent;
+    const isOver = remaining < 0;
+
     const fillClass = getBudgetProgressClass(rawPct);
     const statusColor = getBudgetProgressColor(rawPct);
-    const pctClass = rawPct >= 90 ? 'highlight-negative' : rawPct <= 50 ? 'highlight-positive' : '';
+    const pctClass = rawPct > 90 ? 'highlight-negative' : rawPct >= 70 ? 'highlight-warning' : 'highlight-positive';
+    const catLabel = getCategoryLabelVi(category) || category;
+
+    const sublineRemainingText = isOver
+      ? `Vượt ${formatCurrency(Math.abs(remaining))}`
+      : `Còn ${formatCurrency(remaining)}`;
+
     return `
-      <div class="budget-item">
+      <div class="budget-item ${isOver ? 'budget-item--over' : ''}">
         <div class="budget-info">
           <span class="budget-category-name">
-             ${getCategoryIcon(b.category)} ${escapeHtml(getCategoryLabelVi(b.category) || b.category)}
-           </span>
-           <span class="budget-values">
-             ${formatCurrency(b.spent)}/${formatCurrency(b.limit)}
-             <span class="budget-percent ${pctClass}" style="color:${statusColor};">${pct}%</span>
-           </span>
-         </div>
-         <div class="progress-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${getCategoryLabelVi(b.category)} ngân sách: ${pct}%">
-           <div class="progress-fill ${fillClass}" style="width:${pct}%"></div>
+            ${getCategoryAvatarHtml(category, 'sm')}
+            <span class="budget-category-title" title="${escapeHtml(catLabel)}">${escapeHtml(catLabel)}</span>
+          </span>
+          <span class="budget-values">
+            <span class="budget-spent-ratio" title="${escapeHtml(formatCurrency(spent))} / ${escapeHtml(formatCurrency(limit))}">${formatCompact(spent, { asHtml: true })} / ${formatCompact(limit, { asHtml: true })}</span>
+            <span class="budget-percent ${pctClass}" style="color:${statusColor};">${rawPct}%</span>
+          </span>
+        </div>
+        <div class="progress-track ${rawPct === 0 ? 'progress-track--zero' : ''}" role="progressbar" aria-valuenow="${clampedPct}" aria-valuemin="0" aria-valuemax="100" aria-label="${escapeHtml(catLabel)} ngân sách: ${rawPct}% (${formatCurrency(spent)} / ${formatCurrency(limit)})">
+          <div class="progress-fill ${fillClass}" style="width:${confirmedPct}%;"></div>
+          ${pendingPct > 0 ? `<div class="progress-fill progress-fill--pending" style="width:${pendingPct}%;" title="Đang chờ: ${formatCurrency(pending)}"></div>` : ''}
+        </div>
+        <div class="budget-item-subline">
+          <span class="budget-subline ${isOver ? 'budget-subline--over' : 'budget-subline--remain'}">
+            ${isOver ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DASHBOARD_ICONS.alertTriangle}</svg> ` : ''}${sublineRemainingText}
+          </span>
+          ${pending > 0 ? `<span class="budget-subline-pending">(chờ: ${formatCurrency(pending)})</span>` : ''}
         </div>
       </div>
     `;
   }).join('');
 
+  // Subtitle format: Đã chi X / Tổng Y · còn Z (hoặc vượt Z)
+  const headerSummaryText = `Đã chi ${formatCurrency(totalSpent)} / Tổng ${formatCurrency(totalLimit)} · ${isTotalOver ? `vượt ${formatCurrency(Math.abs(totalRemaining))}` : `còn ${formatCurrency(totalRemaining)}`}`;
+
+  const subtitleHtml = `
+    <span class="budget-header-spent">Đã chi <strong>${formatCurrency(totalSpent)}</strong> / Tổng <strong>${formatCurrency(totalLimit)}</strong></span>
+    <span class="budget-header-sep">·</span>
+    <span class="budget-header-diff ${isTotalOver ? 'is-over' : 'is-remain'}">${isTotalOver ? `vượt ${formatCurrency(Math.abs(totalRemaining))}` : `còn ${formatCurrency(totalRemaining)}`}</span>
+  `;
+
   return `
     <div class="glass-panel" id="budget-progress-panel">
       ${panelHeaderHTML({
         title: t('dashboard.budgetProgress.title'),
-        subtitle: nowFormatted(),
+        subtitle: subtitleHtml,
         iconSvg: DASHBOARD_ICONS.wallet,
         actionHtml: '<button type="button" class="view-all-link" data-nav="budgets" aria-label="' + t('dashboard.budgetProgress.manageAria') + '">' + t('dashboard.budgetProgress.manage') + ' <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>',
       })}
+      <div class="budget-total-progress-wrap">
+        <div class="progress-track budget-total-track ${totalRawPct === 0 ? 'progress-track--zero' : ''}" role="progressbar" aria-valuenow="${totalClampedPct}" aria-valuemin="0" aria-valuemax="100" aria-label="Tiến độ tổng ngân sách: ${totalRawPct}% (${headerSummaryText})">
+          <div class="progress-fill ${totalFillClass}" style="width:${totalConfirmedPct}%;"></div>
+          ${totalPendingPct > 0 ? `<div class="progress-fill progress-fill--pending" style="width:${totalPendingPct}%;" title="Đang chờ: ${formatCurrency(totalPending)}"></div>` : ''}
+        </div>
+      </div>
       <div class="budget-list" id="dashboard-budget-list">
         ${items}
       </div>
-    </div>
-  `;
-}
-
-function insightCardHTML(insight) {
-  let iconSvg = DASHBOARD_ICONS.insight;
-  if (insight.type === 'warning') iconSvg = DASHBOARD_ICONS.alertTriangle;
-  else if (insight.type === 'positive') iconSvg = DASHBOARD_ICONS.checkCircle;
-
-  return `
-    <div class="insight-card" id="insight-card" role="complementary" aria-label="Financial insight">
-      <div class="insight-icon" aria-hidden="true">${kpiIcon(iconSvg)}</div>
-      <div class="insight-body">
-        <div class="insight-tag">${t('dashboard.insight.tag')}</div>
-        <p class="insight-quote">${escapeHtml(insight.text)}</p>
-        <p class="insight-subtext">${escapeHtml(insight.detail)}</p>
+      <div class="budget-widget-footer">
+        <button type="button" class="view-all-link budget-manage-link" data-nav="budgets" aria-label="${t('dashboard.budgetProgress.manageAria')}">
+          Quản lý ngân sách →
+        </button>
       </div>
     </div>
   `;
 }
 
-function quickStatsHTML(netCashFlow, transactions, settings) {
-  // Largest expense this month
-  const expenseTx = transactions
-    .filter(tx => tx.type === 'expense')
-    .sort((a, b) => b.amount - a.amount);
-  const largest = expenseTx[0];
-    const largestHtml = largest
-    ? `<span style="font-weight:600;font-size:0.875rem;">${escapeHtml(largest.merchant)} ${formatCurrency(largest.amount)}</span>`
-    : '<span style="color:var(--text-muted);">' + t('dashboard.kpi.noExpenseThisMonth') + '</span>';
+function insightCardHTML(optionsOrInsight, budgets, stats, periodTx) {
+  let periodTransactions = [];
+  let currentBudgets = [];
+  let currentStats = {};
+  let suggestions = [];
+  let isEmpty = false;
 
-  // Days until pay
-  const payDay = settings.payDay || '15th';
-  const dayNum = parseInt(payDay, 10);
-  let payDaysHtml = '<span style="color:var(--text-muted);">—</span>';
-  if (!isNaN(dayNum)) {
-    const days = daysUntilPay(payDay, transactions);
-    payDaysHtml = `<span style="font-weight:600;font-size:0.875rem;">${days} ngày</span>`;
+  if (optionsOrInsight && typeof optionsOrInsight === 'object' && optionsOrInsight.periodTx) {
+    periodTransactions = optionsOrInsight.periodTx;
+    currentBudgets = optionsOrInsight.budgets || [];
+    currentStats = optionsOrInsight.stats || {};
+    isEmpty = periodTransactions.length === 0;
+    if (!isEmpty) {
+      suggestions = generatePeriodSuggestions({
+        periodTx: periodTransactions,
+        budgets: currentBudgets,
+        stats: currentStats,
+        days: optionsOrInsight.periodState?.days || 30,
+      });
+    }
+  } else if (optionsOrInsight && typeof optionsOrInsight === 'object' && optionsOrInsight.text) {
+    if (optionsOrInsight.text.includes('Theo dõi giao dịch đầu tiên')) {
+      isEmpty = true;
+    } else {
+      suggestions = [{
+        id: 'legacy-insight',
+        type: optionsOrInsight.type === 'danger' ? 'danger' : optionsOrInsight.type === 'warning' ? 'warning' : optionsOrInsight.type === 'positive' ? 'positive' : 'info',
+        iconType: optionsOrInsight.type === 'warning' ? 'alertTriangle' : optionsOrInsight.type === 'positive' ? 'checkCircle' : 'receipt',
+        title: optionsOrInsight.text,
+        detail: optionsOrInsight.detail || '',
+      }];
+    }
+  } else if (Array.isArray(periodTx)) {
+    periodTransactions = periodTx;
+    currentBudgets = budgets || [];
+    currentStats = stats || {};
+    isEmpty = periodTransactions.length === 0;
+    if (!isEmpty) {
+      suggestions = generatePeriodSuggestions({
+        periodTx: periodTransactions,
+        budgets: currentBudgets,
+        stats: currentStats,
+        days: 30,
+      });
+    }
   }
 
-  const netClass = netCashFlow >= 0 ? 'var(--positive)' : 'var(--negative)';
-  const netSign = netCashFlow >= 0 ? '+' : '';
-
-return `
-    <div class="glass-panel" id="quick-stats-panel" style="padding:1.25rem">
-      <div class="panel-header" style="margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border-subtle);">
-      <span class="panel-title">${t('dashboard.monthlyOverview.title')}</span>
-          <span class="panel-subtitle">${formatMonthYear(getLocalDateString(new Date()))}</span>
+  return `
+    <div class="insight-card ${isEmpty ? 'insight-card--empty' : ''}" id="insight-card" role="complementary" aria-label="Gợi ý chi tiêu">
+      <div class="insight-card-header">
+        <span class="insight-tag">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            ${DASHBOARD_ICONS.spark}
+          </svg>
+          ${t('dashboard.insight.tag') || 'Gợi ý'}
+        </span>
+        <span class="insight-rule-badge">Quy tắc tài chính</span>
       </div>
-      <div style="display:flex;flex-direction:column;gap:0.9rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:0.75rem;border-bottom:1px solid var(--border-subtle);">
-           <span style="font-size:0.875rem;color:var(--text-secondary);">${t('dashboard.kpi.netChange')}</span>
-           <span style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:${netClass};">${netSign}${formatCurrency(Math.abs(netCashFlow))}</span>
+
+      ${isEmpty ? `
+        <div class="insight-empty-body">
+          <p class="insight-empty-msg">Chưa có giao dịch để tạo gợi ý</p>
+          <span class="insight-empty-hint">Gợi ý sẽ tự động hiển thị khi có dữ liệu thu chi</span>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:0.75rem;border-bottom:1px solid var(--border-subtle);">
-           <span style="font-size:0.875rem;color:var(--text-secondary);">${t('dashboard.kpi.largestExpense')}</span>
-           ${largestHtml}
+      ` : `
+        <div class="insight-suggestions-list">
+          ${suggestions.map(s => {
+            let iconSvg = DASHBOARD_ICONS.receipt;
+            if (s.iconType === 'alertTriangle') iconSvg = DASHBOARD_ICONS.alertTriangle;
+            else if (s.iconType === 'checkCircle') iconSvg = DASHBOARD_ICONS.checkCircle;
+            else if (s.iconType === 'calendar') iconSvg = DASHBOARD_ICONS.chart;
+
+            return `
+              <div class="insight-suggestion-item insight-suggestion--${s.type}">
+                <div class="insight-suggestion-icon" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    ${iconSvg}
+                  </svg>
+                </div>
+                <div class="insight-suggestion-content">
+                  <div class="insight-suggestion-title">${escapeHtml(s.title)}</div>
+                  <div class="insight-suggestion-detail">${escapeHtml(s.detail)}</div>
+                </div>
+              </div>
+            `;
+          }).join('')}
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-           <span style="font-size:0.875rem;color:var(--text-secondary);">${t('dashboard.kpi.payDay')}</span>
-           ${payDaysHtml}
+      `}
+    </div>
+  `;
+}
+
+function quickStatsHTML(optionsOrNet, transactions, settings, stats, budgets, periodState) {
+  let netCashFlow, periodTx, userSettings, currentStats, currentBudgets, currentPeriodState;
+  if (typeof optionsOrNet === 'object' && optionsOrNet !== null && !Array.isArray(optionsOrNet)) {
+    netCashFlow = optionsOrNet.netCashFlow;
+    periodTx = optionsOrNet.periodTx || [];
+    userSettings = optionsOrNet.settings || {};
+    currentStats = optionsOrNet.stats || {};
+    currentBudgets = optionsOrNet.budgets || [];
+    currentPeriodState = optionsOrNet.periodState || _periodState;
+  } else {
+    netCashFlow = optionsOrNet;
+    periodTx = transactions || [];
+    userSettings = settings || {};
+    currentStats = stats || {};
+    currentBudgets = budgets || [];
+    currentPeriodState = periodState || _periodState;
+  }
+
+  const highlights = getPeriodHighlights({
+    periodTx,
+    budgets: currentBudgets,
+    settings: userSettings,
+    stats: currentStats.income != null ? currentStats : { net: netCashFlow },
+    baseDate: new Date(),
+  });
+
+  const periodSubtitle = currentPeriodState?.label || formatMonthYear(getLocalDateString(new Date()));
+
+  if (highlights.isEmpty) {
+    return `
+      <div class="glass-panel highlights-panel" id="quick-stats-panel" aria-label="Điểm nhấn kỳ này">
+        <div class="panel-header highlights-panel-header">
+          <div class="highlights-header-title-wrap">
+            <span class="panel-title">${t('dashboard.highlights.title') || 'Điểm nhấn kỳ này'}</span>
+            <span class="panel-subtitle highlights-period-subtitle">${escapeHtml(periodSubtitle)}</span>
+          </div>
+          <div class="highlights-header-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              ${DASHBOARD_ICONS.chart}
+            </svg>
+          </div>
+        </div>
+        <div class="highlights-empty-state">
+          <div class="highlights-empty-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              ${DASHBOARD_ICONS.receipt}
+            </svg>
+          </div>
+          <p class="highlights-empty-title">${t('dashboard.highlights.emptyTitle') || 'Chưa có giao dịch trong kỳ'}</p>
+          <p class="highlights-empty-sub">${t('dashboard.highlights.emptySub') || 'Thêm giao dịch thu nhập hoặc chi phí để xem điểm nhấn.'}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="glass-panel highlights-panel" id="quick-stats-panel" aria-label="Điểm nhấn kỳ này">
+      <div class="panel-header highlights-panel-header">
+        <div class="highlights-header-title-wrap">
+          <span class="panel-title">${t('dashboard.highlights.title') || 'Điểm nhấn kỳ này'}</span>
+          <span class="panel-subtitle highlights-period-subtitle">${escapeHtml(periodSubtitle)}</span>
+        </div>
+        <div class="highlights-header-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            ${DASHBOARD_ICONS.chart}
+          </svg>
+        </div>
+      </div>
+      <div class="highlights-metrics-list">
+        <!-- 1. Dòng tiền ròng -->
+        <div class="highlight-metric-row highlight-net-row">
+          <div class="highlight-metric-meta">
+            <span class="highlight-metric-label">${t('dashboard.highlights.netCashFlow') || 'Dòng tiền ròng'}</span>
+            <span class="highlight-metric-hint">${t('dashboard.highlights.netSubline') || 'Thu − Chi'}</span>
+          </div>
+          <div class="highlight-metric-val ${highlights.netClass}" style="color: ${highlights.netColor};">
+            <span class="highlight-net-amount">${highlights.netFormatted}</span>
+          </div>
+        </div>
+
+        <!-- 2. Chi lớn nhất (tên rút gọn 1 dòng) -->
+        <div class="highlight-metric-row highlight-largest-row">
+          <div class="highlight-metric-meta">
+            <span class="highlight-metric-label">${t('dashboard.highlights.largestExpense') || 'Chi lớn nhất'}</span>
+          </div>
+          <div class="highlight-metric-val highlight-largest-val">
+            ${highlights.largest ? `
+              <span class="highlight-merchant-name" title="${escapeHtml(highlights.largest.merchant)}">${escapeHtml(highlights.largest.merchant)}</span>
+              <span class="highlight-merchant-amount">${highlights.largest.formattedAmount}</span>
+            ` : `
+              <span class="highlight-val-empty text-muted">${t('dashboard.highlights.noExpenseThisPeriod') || 'Không có chi phí trong kỳ'}</span>
+            `}
+          </div>
+        </div>
+
+        <!-- 3. Còn N ngày đến kỳ lương (dd/mm) -->
+        <div class="highlight-metric-row highlight-payday-row">
+          <div class="highlight-metric-meta">
+            <span class="highlight-metric-label">${t('dashboard.highlights.payDay') || 'Kỳ lương'}</span>
+          </div>
+          <div class="highlight-metric-val highlight-payday-val">
+            <span class="highlight-payday-pill">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              ${highlights.payDayInfo.text}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -477,38 +967,65 @@ return `
 /* ---------------------------------------------------------------- *
  * Chart period toggle — re-renders the spending chart
  * ---------------------------------------------------------------- */
-async function updateChart(container, period, transactions) {
+async function updateChart(container, period, transactions, periodState) {
   const chartContainer = container.querySelector('#spending-chart-container');
   const incomeEl = container.querySelector('#chart-summary-income');
   const expenseEl = container.querySelector('#chart-summary-expenses');
   const badgesContainer = container.querySelector('.chart-summary-badges');
+  const subtitleEl = container.querySelector('#spending-overview-panel .panel-subtitle');
   if (!chartContainer) return;
 
-  chartContainer.innerHTML = renderChartSkeleton();
-  if (incomeEl) incomeEl.textContent = '—';
-  if (expenseEl) expenseEl.textContent = '—';
-  if (badgesContainer) badgesContainer.style.display = 'flex';
-
-  await new Promise(r => setTimeout(r, 150));
+  destroySpendingChart();
 
   let chartData;
-  let incomeTotal, expenseTotal;
-
-  if (period === 'week') {
-    chartData = getWeeklySeries(transactions);
+  if (period === 'period') {
+    chartData = computeDailySeries(transactions, 'period', periodState);
   } else {
-    chartData = getMonthlyCashFlow(transactions);
+    chartData = computeDailySeries(transactions, period);
   }
-  incomeTotal = chartData.reduce((s, d) => s + d.income, 0);
-  expenseTotal = chartData.reduce((s, d) => s + d.expenses, 0);
 
-  const hasData = chartData.some(d => d.income > 0 || d.expenses > 0);
-  const chartHtml = hasData ? AreaChart({ data: chartData }) : getChartAreaContent('empty', '', period);
+  const incomeTotal = chartData.reduce((s, d) => s + (d.income || 0), 0);
+  const expenseTotal = chartData.reduce((s, d) => s + (d.expense || 0), 0);
+  const hasData = chartData.some(d => d.income > 0 || d.expense > 0);
 
-  chartContainer.innerHTML = chartHtml;
-  if (incomeEl) incomeEl.textContent = formatCurrency(incomeTotal);
-  if (expenseEl) expenseEl.textContent = formatCurrency(expenseTotal);
+  if (subtitleEl) {
+    subtitleEl.textContent = getSpendingChartSubtitle(period, periodState, chartData);
+  }
+
+  if (incomeEl) incomeEl.innerHTML = formatCurrency(incomeTotal, { asHtml: true });
+  if (expenseEl) expenseEl.innerHTML = formatCurrency(expenseTotal, { asHtml: true });
   if (badgesContainer) badgesContainer.style.display = hasData ? 'flex' : 'none';
+
+  if (!hasData) {
+    chartContainer.innerHTML = `
+      <div class="chart-empty-state">
+        <div class="chart-empty-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </div>
+        <h4 class="chart-empty-title">Chưa có giao dịch trong kỳ</h4>
+        <p class="chart-empty-desc">Thêm thu nhập hoặc chi phí để theo dõi biến động tài chính.</p>
+        <button type="button" class="btn btn-primary" id="chart-empty-add-tx">
+          Thêm giao dịch
+        </button>
+      </div>
+    `;
+    const addBtn = chartContainer.querySelector('#chart-empty-add-tx');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => emit('navigate', { page: 'transactions' }));
+    }
+  } else {
+    chartContainer.innerHTML = `
+      <div class="spending-chart-wrapper">
+        <canvas id="spending-chart-canvas" role="img" aria-label="Biểu đồ thu nhập và chi phí"></canvas>
+      </div>
+    `;
+    const canvas = chartContainer.querySelector('#spending-chart-canvas');
+    if (canvas) {
+      renderSpendingChart(canvas, { data: chartData });
+    }
+  }
 }
 
 /* ---------------------------------------------------------------- *
@@ -523,68 +1040,123 @@ export async function render(container) {
   ]);
 
   _transactions = transactions;
-  const currentMonth = localMonthKey(new Date(), 0);
-  const monthTx = transactions.filter(tx => tx.date.startsWith(currentMonth));
-  const lastMonthTx = transactions.filter(tx => tx.date.startsWith(lastMonthKey()));
 
-  const monthTotals = computeTotals(monthTx);
-  const lastMonthTotals = computeTotals(lastMonthTx);
-  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
-  const savingsRate = monthTotals.income > 0
-    ? Number(((monthTotals.income - monthTotals.expenses) / monthTotals.income * 100).toFixed(1))
-    : 0;
-  const lastMonthSavingsRate = lastMonthTotals.income > 0
-    ? Number(((lastMonthTotals.income - lastMonthTotals.expenses) / lastMonthTotals.income * 100).toFixed(1))
-    : 0;
-
-  const sortedBudgets = [...budgets].sort((a, b) => {
-    const ai = CATEGORIES.findIndex(c => c.id === a.category);
-    const bi = CATEGORIES.findIndex(c => c.id === b.category);
-    if (ai === -1 && bi === -1) return 0;
-    if (ai === -1) return 1;
-    if (bi === -1) return -1;
-    return ai - bi;
+  // Compute unified statistics for the dashboard via shared selector based on global period state
+  const stats = await getDashboardStats({
+    from: _periodState.from,
+    to: _periodState.to,
+    period: _periodState.period,
+    transactions,
+    budgets,
+    accounts,
   });
 
-  const recentTx = [...transactions]
+  // Filter transactions within the selected period for widgets
+  const fromStr = stats.range.from;
+  const toStr = stats.range.to;
+  const periodTx = (transactions || []).filter(tx => {
+    const d = normalizeDate(tx.date);
+    return (!fromStr || d >= fromStr) && (!toStr || d <= toStr);
+  });
+
+  const totalBalance = stats.balance;
+  const savingsRate = stats.savingsRate;
+  const netCashFlow = stats.net;
+
+  const recentTx = [...periodTx]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .slice(0, 6);
 
-  const insight = generateInsight(monthTx, sortedBudgets);
-  const netCashFlow = monthTotals.income - monthTotals.expenses;
-  const compareRange = lastMonthRange();
+  const insight = generateInsight(periodTx.length ? periodTx : transactions, budgets);
 
-  const weeklyData = getWeeklySeries(transactions);
-  const weekIncome = weeklyData.reduce((s, d) => s + d.income, 0);
-  const weekExpenses = weeklyData.reduce((s, d) => s + d.expenses, 0);
-  const weeklyHasData = weeklyData.some(d => d.income > 0 || d.expenses > 0);
-  const weeklyChartState = weeklyHasData ? 'ready' : 'empty';
-  const weeklyChartHtml = weeklyHasData ? AreaChart({ data: weeklyData }) : getChartAreaContent('empty', '', 'week');
+  // Spending chart: compute daily series
+  let chartData;
+  if (_period === 'period') {
+    if (stats.daily && stats.daily.length > 0) {
+      chartData = stats.daily.map(d => ({
+        date: d.date,
+        income: d.income,
+        expense: d.expense,
+        expenses: d.expense,
+      }));
+    } else {
+      chartData = computeDailySeries(transactions, 'period', _periodState);
+    }
+  } else {
+    chartData = computeDailySeries(transactions, _period, _periodState);
+  }
 
-container.innerHTML = `
-    <div class="hero-overview">
-      ${errorBoundary(() => heroHeaderHTML(), 'hero')}
-      ${errorBoundary(() => kpiGridHTML(totalBalance, monthTotals, lastMonthTotals, savingsRate, lastMonthSavingsRate, netCashFlow, compareRange), 'kpi')}
-    </div>
+  const chartIncome = chartData.reduce((s, d) => s + (d.income || 0), 0);
+  const chartExpenses = chartData.reduce((s, d) => s + (d.expense || 0), 0);
+  const chartHasData = chartData.some(d => d.income > 0 || d.expense > 0);
+  const chartSubtitle = getSpendingChartSubtitle(_period, _periodState, chartData);
 
-    <div class="dashboard-content-grid">
-      <div class="dashboard-col">
-        ${errorBoundary(() => spendingChartPanelHTML({
-          chartHtml: weeklyChartHtml,
-          period: 'week',
-          incomeTotal: weekIncome,
-          expenseTotal: weekExpenses,
-          isEmpty: !weeklyHasData,
-        }), 'spending-chart')}
-        ${errorBoundary(() => recentTransactionsHTML(recentTx), 'recent-transactions')}
-      </div>
-      <div class="dashboard-col">
-         ${errorBoundary(() => budgetProgressHTML(sortedBudgets), 'budget-progress')}
-        ${errorBoundary(() => insightCardHTML(insight), 'insight')}
-        ${errorBoundary(() => quickStatsHTML(netCashFlow, monthTx, settings), 'quick-stats')}
-      </div>
+  const userName = getUserDisplayName(settings);
+
+  container.innerHTML = `
+    <div class="dashboard-layout" id="dashboard-layout">
+      ${errorBoundary(() => dashboardHeaderHTML(userName), 'dashboard-header')}
+
+      <section class="dashboard-kpi-row" aria-label="Chỉ số chính">
+        ${errorBoundary(() => kpiGridHTML({
+          totalBalance,
+          income: stats.income,
+          expenses: stats.expense,
+          savingsRate,
+          compareRange: stats.prev.label,
+          deltas: stats.deltas,
+          days: stats.range.days,
+        }), 'kpi')}
+      </section>
+
+      <section class="dashboard-grid-row dashboard-row-chart-budget">
+        <div class="dashboard-col-chart">
+          ${errorBoundary(() => spendingChartPanelHTML({
+            period: _period,
+            subtitle: chartSubtitle,
+            incomeTotal: chartIncome,
+            expenseTotal: chartExpenses,
+            isEmpty: !chartHasData,
+          }), 'spending-chart')}
+        </div>
+        <div class="dashboard-col-budget">
+          ${errorBoundary(() => budgetProgressHTML(stats.byCategory), 'budget-progress')}
+        </div>
+      </section>
+
+      <section class="dashboard-grid-row dashboard-row-tx-sidebar">
+        <div class="dashboard-col-tx">
+          ${errorBoundary(() => recentTransactionsHTML(recentTx), 'recent-transactions')}
+        </div>
+        <div class="dashboard-col-sidebar">
+          ${errorBoundary(() => quickStatsHTML({
+            netCashFlow,
+            periodTx,
+            settings,
+            stats,
+            budgets,
+            periodState: _periodState,
+          }), 'quick-stats')}
+          ${errorBoundary(() => insightCardHTML({
+            periodTx,
+            budgets,
+            stats,
+            periodState: _periodState,
+          }), 'insight')}
+        </div>
+      </section>
     </div>
   `;
+
+  // Initialize chart canvas if data is available
+  if (chartHasData) {
+    const canvas = container.querySelector('#spending-chart-canvas');
+    if (canvas) {
+      renderSpendingChart(canvas, { data: chartData });
+    }
+  } else {
+    destroySpendingChart();
+  }
 
   attachListeners(container);
 
@@ -594,6 +1166,9 @@ container.innerHTML = `
   regressionTestDiv.setAttribute('id', 'encoding-regression-test');
   regressionTestDiv.style.position = 'absolute';
   regressionTestDiv.style.left = '-9999px';
+  regressionTestDiv.style.width = '1px';
+  regressionTestDiv.style.height = '1px';
+  regressionTestDiv.style.overflow = 'hidden';
   container.appendChild(regressionTestDiv);
 }
 
@@ -601,6 +1176,12 @@ container.innerHTML = `
  * Event listeners
  * ---------------------------------------------------------------- */
 function attachListeners(container) {
+  // Period selector change listener
+  attachPeriodSelectorListeners(container, (newRange) => {
+    _periodState = newRange;
+    render(container);
+  });
+
   // Widget error retry - re-render page to fix failed widget
   container.querySelectorAll('[data-retry-widget]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -616,7 +1197,7 @@ function attachListeners(container) {
         b.setAttribute('aria-pressed', b === btn);
       });
       _period = btn.dataset.chartPeriod;
-      updateChart(container, _period, _transactions);
+      updateChart(container, _period, _transactions, _periodState);
     });
   });
 
@@ -630,6 +1211,28 @@ function attachListeners(container) {
     el.addEventListener('click', e => {
       e.preventDefault();
       emit('navigate', { page: el.dataset.nav });
+    });
+  });
+
+  // Initialize keyboard accessibility on KPI tooltips
+  initKpiTooltips(container);
+
+  // Recent transactions row click & keyboard handler to open transaction details
+  container.querySelectorAll('.recent-tx-row').forEach(row => {
+    const handleOpen = () => {
+      const txId = row.dataset.recentTxId;
+      const tx = _transactions.find(t => String(t.id) === String(txId));
+      if (tx) {
+        editTransaction(tx);
+      }
+    };
+
+    row.addEventListener('click', handleOpen);
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleOpen();
+      }
     });
   });
 }

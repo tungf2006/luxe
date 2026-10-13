@@ -5,7 +5,7 @@
 
 import dataService from '../../services/dataAdapter.js';
 import { EXPENSE_CATEGORIES, CATEGORIES } from '../../constants/categories.js';
-import { escapeHtml, formatAmount, parseNumber, getActiveCurrency, formatSpelledAmount, getLocalDateString } from '../../utils/format.js';
+import { escapeHtml, formatAmount, parseNumber, parseVndInput, getActiveCurrency, formatSpelledAmount, getLocalDateString } from '../../utils/format.js';
 import { openModal, closeModal } from '../../components/ui/Modal.js';
 import { showToast } from '../../components/ui/Toast.js';
 import { emit } from '../../utils/eventBus.js';
@@ -338,7 +338,7 @@ function updateSpelledAmount() {
   const spelledEl = document.getElementById('tx-amount-spelled');
   const amountInput = document.getElementById('tx-amount');
   if (!spelledEl || !amountInput) return;
-  const num = parseNumber(amountInput.value);
+  const num = parseVndInput(amountInput.value);
   if (num > 0) {
     const text = formatSpelledAmount(num, getActiveCurrency());
     spelledEl.textContent = text;
@@ -353,6 +353,14 @@ function handleAmountInputEvent(e) {
   const input = e.target;
   const original = input.value;
   const cursor = input.selectionStart || 0;
+
+  // If user is actively typing shorthand (e.g. 50k, 1,5tr, 2tr5), preserve text
+  const hasShorthand = /[a-zA-Z]/i.test(original);
+  if (hasShorthand) {
+    updateSpelledAmount();
+    validateForm();
+    return;
+  }
 
   // Count digits before the cursor
   const digitsBefore = original.slice(0, cursor).replace(/\D/g, '').length;
@@ -395,7 +403,7 @@ function setFieldError(id, message) {
 
 function validateForm() {
   const merchant = document.getElementById('tx-merchant')?.value.trim() || '';
-  const amount = parseNumber(document.getElementById('tx-amount')?.value);
+  const amount = parseVndInput(document.getElementById('tx-amount')?.value);
   const account = document.getElementById('tx-account')?.value || '';
   const category = document.getElementById('tx-category')?.value || '';
   const date = document.getElementById('tx-date')?.value || '';
@@ -468,7 +476,7 @@ async function handleSubmit(keepOpen = false) {
     return;
   }
   const type = document.querySelector('[data-tx-type].active')?.dataset.txType || 'expense';
-  const amount = parseNumber(document.getElementById('tx-amount').value);
+  const amount = parseVndInput(document.getElementById('tx-amount').value);
   const recurring = document.getElementById('tx-recurring').checked;
   const paymentMethod = document.getElementById('tx-payment-method')?.value || 'card';
   const tx = {
@@ -520,9 +528,9 @@ async function refreshDialog() {
       _accounts = getDefaultAccounts();
     } catch {
       _accounts = [
-        { id: 'a01', name: 'Vietcombank – Thanh toán', type: 'checking', balance: 15420, currency: getActiveCurrency() },
-        { id: 'a02', name: 'Techcombank – Tiết kiệm', type: 'savings', balance: 9160, currency: getActiveCurrency() },
-        { id: 'a03', name: 'Tiền mặt', type: 'checking', balance: 5000, currency: getActiveCurrency() },
+        { id: 'a01', name: 'Vietcombank – Thanh toán', type: 'checking', balance: 28500000, currency: getActiveCurrency() },
+        { id: 'a02', name: 'Techcombank – Tiết kiệm', type: 'savings', balance: 18000000, currency: getActiveCurrency() },
+        { id: 'a03', name: 'Tiền mặt', type: 'checking', balance: 3500000, currency: getActiveCurrency() },
       ];
     }
   }
@@ -587,7 +595,18 @@ function initDialogListeners(dialog) {
     refreshCategoryChips(e.target.value);
     validateForm();
   });
-  dialog.querySelector('#tx-amount')?.addEventListener('input', handleAmountInputEvent);
+  const txAmtInput = dialog.querySelector('#tx-amount');
+  if (txAmtInput) {
+    txAmtInput.addEventListener('input', handleAmountInputEvent);
+    txAmtInput.addEventListener('blur', () => {
+      const parsed = parseVndInput(txAmtInput.value);
+      if (parsed > 0) {
+        txAmtInput.value = Number(parsed).toLocaleString('vi-VN');
+      }
+      updateSpelledAmount();
+      validateForm();
+    });
+  }
   dialog.querySelector('#tx-recurring')?.addEventListener('change', e => {
     document.getElementById('tx-recurring-options').hidden = !e.target.checked;
   });
@@ -624,7 +643,7 @@ function initDialogListeners(dialog) {
         const delta = Number(quickAmountBtn.dataset.quickAmount);
         const amountInput = document.getElementById('tx-amount');
         if (amountInput) {
-          const current = parseNumber(amountInput.value) || 0;
+          const current = parseVndInput(amountInput.value) || 0;
           const next = current + delta;
           amountInput.value = formatAmountInput(String(next));
           updateSpelledAmount();

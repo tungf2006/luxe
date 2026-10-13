@@ -39,6 +39,24 @@
     "topbarSearchAria": "Tìm kiếm toàn cục",
     "notifications": "Thông báo",
     "3Unread": "3 thông báo chưa đọc",
+    "notificationCenter": {
+      "title": "Thông báo",
+      "all": "Tất cả",
+      "unread": "Chưa đọc",
+      "finance": "Cảnh báo & Hoá đơn",
+      "markAllRead": "Đánh dấu tất cả đã đọc",
+      "markRead": "Đã đọc",
+      "emptyTitle": "Không có thông báo mới",
+      "emptyDesc": "Bạn đã cập nhật tất cả thông tin quan trọng.",
+      "settings": "Cài đặt thông báo",
+      "newBadge": "{{count}} mới",
+      "unreadBadge": "{{count}} thông báo chưa đọc",
+      "justNow": "Vừa xong",
+      "minutesAgo": "{{count}} phút trước",
+      "hoursAgo": "{{count}} giờ trước",
+      "daysAgo": "{{count}} ngày trước",
+      "deleteAria": "Xoá thông báo"
+    },
     "userMenu": {
       "profile": "Hồ sơ",
       "settings": "Cài đặt",
@@ -213,9 +231,9 @@
       "flat": "Không thay đổi",
       "good": "tốt",
       "bad": "xấu",
-      "netChange": "Dòng tiền mạnh",
+      "netChange": "Dòng tiền ròng",
       "largestExpense": "Chi phí lớn nhất",
-      "payDay": "Ngày nhận lương",
+      "payDay": "Kỳ lương",
       "noExpenseThisMonth": "Không có chi phí trong tháng này",
       "totalBalanceTooltip": "Số dư = tổng số dư tất cả tài khoản. Tăng là tốt.",
       "incomeTooltip": "Thu nhập = tổng giao dịch thu nhập trong tháng. Tăng là tốt.",
@@ -236,9 +254,11 @@
       "viewAll": "Xem tất cả",
       "viewAllAria": "Xem tất cả giao dịch",
       "headers": {
-        "merchant": "Người thu",
+        "transaction": "Giao dịch",
+        "merchant": "Giao dịch",
         "category": "Danh mục",
         "date": "Ngày",
+        "status": "Trạng thái",
         "amount": "Số tiền"
       },
       "empty": "Không có giao dịch gần đây.",
@@ -250,17 +270,28 @@
       "noBudget": "Chưa có ngân sách nào.",
       "manage": "Quản lý",
       "manageAria": "Quản lý ngân sách",
-      "overviewTitle": "Tổng quan hàng tháng",
-      "strongCashFlow": "Dòng tiền mạnh",
+      "overviewTitle": "Điểm nhấn kỳ này",
+      "strongCashFlow": "Dòng tiền ròng",
       "categoryName": "Tên danh mục",
       "categoryBudget": "danh mục ngân sách"
     },
     "insight": {
-      "tag": "Phân tích AI"
+      "tag": "Gợi ý"
     },
     "monthlyOverview": {
-      "title": "Tổng quan hàng tháng",
+      "title": "Điểm nhấn kỳ này",
       "subtitleFormat": "Tháng {{month}} {{year}}"
+    },
+    "highlights": {
+      "title": "Điểm nhấn kỳ này",
+      "netCashFlow": "Dòng tiền ròng",
+      "netSubline": "Thu − Chi",
+      "largestExpense": "Chi lớn nhất",
+      "payDay": "Kỳ lương",
+      "suggestionsTitle": "Gợi ý",
+      "noExpenseThisPeriod": "Không có chi phí trong kỳ",
+      "emptyTitle": "Chưa có giao dịch trong kỳ",
+      "emptySub": "Thêm giao dịch thu nhập hoặc chi phí để xem điểm nhấn và gợi ý."
     },
     "chartEmpty": {
       "title": "Chưa có giao dịch nào",
@@ -369,6 +400,12 @@
     "pageDesc": "Theo dõi và kiểm soát giới hạn chi tiêu của bạn",
     "addBudget": "Đặt ngân sách mới",
     "addBudgetAria": "Đặt ngân sách mới",
+    "resetBudgets": "Đặt lại ngân sách",
+    "resetBudgetsAria": "Đặt lại ngân sách",
+    "editLimit": "Sửa hạn mức",
+    "resetSingle": "Đặt lại về mặc định",
+    "resetSuccess": "Đã đặt lại ngân sách thành công!",
+    "resetSingleSuccess": "Đã đặt lại hạn mức cho {{category}}.",
     "summary": {
       "totalBudget": "Tổng ngân sách",
       "totalSpent": "Tổng chi",
@@ -706,8 +743,8 @@
     "savingDetail": "Tiết kiệm được {{net}} từ thu nhập {{income}} trong tháng này.",
     "overspent": "Chi tiêu ({{expenses}}) đã vượt thu nhập ({{income}})",
     "overspentDetail": "Bạn đang chi tiêu nhiều hơn thu nhập. Hãy xem xét cắt giảm chi phí không cần thiết.",
-    "noTransactions": "Theo dõi giao dịch đầu tiên để xem phân tích",
-    "noTransactionsDetail": "Thêm thu nhập hoặc chi phí để bắt đầu.",
+    "noTransactions": "Chưa có giao dịch trong kỳ",
+    "noTransactionsDetail": "Thêm thu nhập hoặc chi phí để bắt đầu theo dõi.",
     "actionReports": "Xem báo cáo chi tiêu",
     "actionReports2": "Xem báo cáo",
     "actionBudgets": "Xem ngân sách {{category}}",

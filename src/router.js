@@ -98,7 +98,7 @@ function escapeText(str) {
 function renderErrorHTML(page, err) {
   return `
     <div class="page-error" role="alert">
-      <span class="page-error-icon" aria-hidden="true">⚠️</span>
+      <span class="page-error-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
       <h3>Không thể tải trang</h3>
       <p>${escapeText(err?.message || 'Đã có lỗi xảy ra. Vui lòng thử lại.')}</p>
       <button type="button" class="btn-secondary" data-retry-page="${escapeText(page)}">Thử lại</button>
@@ -155,7 +155,7 @@ function updateNavActiveState(page) {
     }
   });
 
-  const titleEl = document.getElementById('page-title-header');
+  const titleEl = document.getElementById('page-title-header') || document.getElementById('breadcrumb-current');
   const navItem = getNavItem(page);
   if (titleEl && navItem) {
     titleEl.textContent = navItem.title;
@@ -164,9 +164,27 @@ function updateNavActiveState(page) {
   document.title = getPageDocumentTitle(page);
 
   const breadcrumbEl = document.getElementById('breadcrumb-current');
-  if (breadcrumbEl && navItem) {
+  if (breadcrumbEl && navItem && breadcrumbEl !== titleEl && !breadcrumbEl.contains(titleEl)) {
     breadcrumbEl.textContent = navItem.label;
     breadcrumbEl.setAttribute('aria-current', 'page');
+  }
+
+  // Eliminate duplicate breadcrumb trail on root page (dashboard)
+  const isRootPage = (page === 'dashboard' || page === '' || page === 'home');
+  const breadcrumbNav = document.getElementById('breadcrumb');
+  if (breadcrumbNav) {
+    breadcrumbNav.classList.toggle('is-root-page', isRootPage);
+  }
+  const breadcrumbHome = document.getElementById('breadcrumb-home');
+  if (breadcrumbHome) {
+    const homeLi = breadcrumbHome.closest('.breadcrumb-item');
+    if (homeLi) {
+      homeLi.style.display = isRootPage ? 'none' : '';
+    }
+  }
+  const breadcrumbSeparator = document.querySelector('.breadcrumb-separator');
+  if (breadcrumbSeparator) {
+    breadcrumbSeparator.style.display = isRootPage ? 'none' : '';
   }
 }
 

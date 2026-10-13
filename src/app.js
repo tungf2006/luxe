@@ -22,6 +22,7 @@ import dataService, { useSupabase, useLocalStorage } from './services/dataAdapte
 import { DEFAULT_PAGE } from './constants/navigation.js';
 import { injectNavMarkup } from './components/ui/navRenderer.js';
 import { showToast } from './components/ui/Toast.js';
+import { initNotificationDropdown, closeNotificationDropdown } from './components/ui/NotificationDropdown.js';
 import {
   initAuth,
   isAuthenticated,
@@ -33,7 +34,8 @@ import { on } from './utils/eventBus.js';
 import { setActiveCurrency } from './utils/format.js';
 import { initI18n, t } from './utils/i18n.js';
 
-import { initStorage } from './services/storage.js';
+import { initStorage, getStorageScope } from './services/storage.js';
+import { clearGuestSeedData } from './services/dataAdapter.js';
 
 /**
  * Attach click listeners to all [data-page] elements (sidebar links,
@@ -125,6 +127,7 @@ function initTopbarDropdown() {
   if (!avatarBtn || !dropdown) return;
 
   function open() {
+    closeNotificationDropdown();
     dropdown.classList.add('open');
     dropdown.setAttribute('aria-hidden', 'false');
     avatarBtn.setAttribute('aria-expanded', 'true');
@@ -203,6 +206,7 @@ function updateUserHeader() {
                         user.email?.split('@')[0] ||
                         'Người dùng';
     nameEl.textContent = displayName;
+    nameEl.setAttribute('title', displayName);
     nameEl.style.display = 'inline-block';
   }
 
@@ -229,6 +233,33 @@ function updateUserHeader() {
 }
 
 /**
+ * Update visibility of the Guest Mode demo banner.
+ */
+function updateGuestModeIndicator() {
+  const indicator = document.getElementById('guest-mode-indicator');
+  if (!indicator) return;
+  const scope = getStorageScope();
+  if (scope === 'guest') {
+    indicator.style.display = 'inline-flex';
+  } else {
+    indicator.style.display = 'none';
+  }
+}
+
+/**
+ * Wire up the "Xoá dữ liệu mẫu" action in the Guest Mode pill.
+ */
+function initGuestModeActions() {
+  const clearBtn = document.getElementById('btn-clear-guest-data');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      clearGuestSeedData();
+      showToast('Đã xoá dữ liệu mẫu. Bạn đang ở trạng thái sạch như tài khoản mới.', 'info');
+    });
+  }
+}
+
+/**
  * Main initialisation.
  */
 async function initApp() {
@@ -245,8 +276,13 @@ async function initApp() {
   initMobileNav();
   initMobileMoreSheet();
   initTopbarDropdown();
+  initNotificationDropdown();
   initLogout();
   initTransactionForm();
+  initGuestModeActions();
+  updateGuestModeIndicator();
+  on('auth:changed', updateGuestModeIndicator);
+  on('data:changed', updateGuestModeIndicator);
 
   const pageContainer = document.getElementById('page-container');
   if (!pageContainer) return;
@@ -275,8 +311,10 @@ async function initApp() {
       useSupabase(user.id);
     }
     updateUserHeader();
+    updateGuestModeIndicator();
     navigateTo(destination);
   } else {
+    updateGuestModeIndicator();
     navigateTo('login');
   }
 
@@ -291,6 +329,7 @@ async function initApp() {
       cleanOAuthUrl(destination);
 
       updateUserHeader();
+      updateGuestModeIndicator();
       navigateTo(destination);
     }
   });

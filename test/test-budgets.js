@@ -13,9 +13,18 @@ import puppeteer from 'puppeteer';
     await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
     await new Promise(r => setTimeout(r, 1000));
 
-    console.log('→ Navigating to Budgets via #nav-budgets...');
-    await page.click('#nav-budgets');
-    await new Promise(r => setTimeout(r, 1000));
+    const onLogin = await page.$('#btn-guest-mode');
+    if (onLogin) {
+      console.log('→ Entering guest mode...');
+      await page.click('#btn-guest-mode');
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    console.log('→ Navigating to Budgets (#budgets)...');
+    await page.evaluate(() => {
+      window.location.hash = '#budgets';
+    });
+    await new Promise(r => setTimeout(r, 1200));
 
     // 1. Check budget cards
     const cards = await page.$$('.budget-overview-card');
@@ -108,8 +117,17 @@ import puppeteer from 'puppeteer';
 
     await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
     await new Promise(r => setTimeout(r, 1000));
-    await page.click('#nav-budgets');
-    await new Promise(r => setTimeout(r, 1000));
+
+    const onLoginFuture = await page.$('#btn-guest-mode');
+    if (onLoginFuture) {
+      await page.click('#btn-guest-mode');
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    await page.evaluate(() => {
+      window.location.hash = '#budgets';
+    });
+    await new Promise(r => setTimeout(r, 1200));
 
     const futureCards = await page.evaluate(() => {
       const cardEls = document.querySelectorAll('.budget-overview-card');

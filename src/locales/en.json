@@ -39,6 +39,24 @@
     "topbarSearchAria": "Global search",
     "notifications": "Notifications",
     "3Unread": "3 unread notifications",
+    "notificationCenter": {
+      "title": "Notifications",
+      "all": "All",
+      "unread": "Unread",
+      "finance": "Alerts & Bills",
+      "markAllRead": "Mark all as read",
+      "markRead": "Mark read",
+      "emptyTitle": "No new notifications",
+      "emptyDesc": "You are all caught up.",
+      "settings": "Notification settings",
+      "newBadge": "{{count}} new",
+      "unreadBadge": "{{count}} unread notifications",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago",
+      "deleteAria": "Delete notification"
+    },
     "userMenu": {
       "profile": "Profile",
       "settings": "Settings",
@@ -213,7 +231,7 @@
       "flat": "No change",
       "good": "good",
       "bad": "bad",
-      "netChange": "Strong Cash Flow",
+      "netChange": "Net Cash Flow",
       "largestExpense": "Largest Expense",
       "payDay": "Payday",
       "noExpenseThisMonth": "No expenses this month",
@@ -236,9 +254,11 @@
       "viewAll": "View All",
       "viewAllAria": "View all transactions",
       "headers": {
-        "merchant": "Merchant",
+        "transaction": "Transaction",
+        "merchant": "Transaction",
         "category": "Category",
         "date": "Date",
+        "status": "Status",
         "amount": "Amount"
       },
       "empty": "No recent transactions.",
@@ -250,17 +270,28 @@
       "noBudget": "No budgets.",
       "manage": "Manage",
       "manageAria": "Manage budgets",
-      "overviewTitle": "Monthly Overview",
-      "strongCashFlow": "Strong Cash Flow",
+      "overviewTitle": "Period Highlights",
+      "strongCashFlow": "Net Cash Flow",
       "categoryName": "Category Name",
       "categoryBudget": "category budget"
     },
     "insight": {
-      "tag": "AI Analysis"
+      "tag": "Suggestions"
     },
     "monthlyOverview": {
-      "title": "Monthly Overview",
+      "title": "Period Highlights",
       "subtitleFormat": "Month {{month}} {{year}}"
+    },
+    "highlights": {
+      "title": "Period Highlights",
+      "netCashFlow": "Net Cash Flow",
+      "netSubline": "Income − Expense",
+      "largestExpense": "Largest Expense",
+      "payDay": "Payday",
+      "suggestionsTitle": "Suggestions",
+      "noExpenseThisPeriod": "No expenses in this period",
+      "emptyTitle": "No transactions in this period",
+      "emptySub": "Add income or expense transactions to view highlights and suggestions."
     },
     "chartEmpty": {
       "title": "No transactions yet",
@@ -369,6 +400,12 @@
     "pageDesc": "Track and control your spending limits",
     "addBudget": "Set New Budget",
     "addBudgetAria": "Set new budget",
+    "resetBudgets": "Reset Budgets",
+    "resetBudgetsAria": "Reset budgets to defaults",
+    "editLimit": "Edit Limit",
+    "resetSingle": "Reset to Default",
+    "resetSuccess": "Budgets reset successfully!",
+    "resetSingleSuccess": "Limit reset for {{category}}.",
     "summary": {
       "totalBudget": "Total Budget",
       "totalSpent": "Total Spent",
@@ -705,8 +742,8 @@
     "savingDetail": "Saved {{net}} from income {{income}} this month.",
     "overspent": "Expenses ({{expenses}}) exceeded income ({{income}})",
     "overspentDetail": "You are spending more than you earn. Consider cutting unnecessary expenses.",
-    "noTransactions": "Track your first transaction to see analysis",
-    "noTransactionsDetail": "Add income or expenses to get started.",
+    "noTransactions": "No transactions in this period",
+    "noTransactionsDetail": "Add income or expense transactions to start tracking.",
     "actionReports": "View Expense Report",
     "actionReports2": "View Report",
     "actionBudgets": "View {{category}} Budget",

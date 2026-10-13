@@ -36,7 +36,7 @@ export function renderEmptyState({ icon = 'svg', title = 'Không có dữ liệu
   return `
     <div class="empty-state">
       <div class="empty-state-icon" style="margin-bottom: 16px; opacity: 0.5;">
-        ${icon === 'svg' ? '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>' : icon}
+        ${icon === 'svg' ? '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>' : icon}
       </div>
       <h3 class="empty-state-title" style="margin-bottom: 8px; color: var(--text-primary); font-size: 1.1rem;">${title}</h3>
       <p class="empty-state-description" style="color: var(--text-muted); font-size: 0.9rem;">${description}</p>
@@ -53,7 +53,7 @@ export function renderErrorState({ message = 'Đã có lỗi xảy ra', onRetryI
   return `
     <div class="error-state" style="padding: 24px; text-align: center; background: var(--negative-bg); border: 1px solid var(--negative-border); border-radius: var(--radius-md);">
       <div style="color: var(--negative); margin-bottom: 12px;">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
       </div>
       <h3 style="color: var(--text-primary); margin-bottom: 8px;">Không thể tải dữ liệu</h3>
       <p style="color: var(--text-muted); margin-bottom: 0;">${message}</p>

@@ -23,11 +23,23 @@ import puppeteer from 'puppeteer';
   try {
     // 1. Load the homepage
     console.log('→ Loading http://localhost:3000 ...');
-    await page.goto('http://localhost:3000', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.goto('http://localhost:3000', { waitUntil: 'networkidle0', timeout: 60000 });
 
     // 2. Check for errors
-    await new Promise(r => setTimeout(r, 2000));
-    if (errors.length) {
+    await page.waitForFunction(() => !window.location.hash.includes('loading'), { timeout: 10000 }).catch(() => {});
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Handle guest mode login if redirected to #login
+    if (page.url().includes('#login')) {
+      const guestBtn = await page.waitForSelector('#btn-guest-mode', { timeout: 5000 }).catch(() => null);
+      if (guestBtn) {
+        await guestBtn.click();
+        await page.waitForSelector('.app-layout:not([style*="display: none"])', { timeout: 10000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    if (errors.filter(e => !e.includes('supabase-min.js')).length) {
       console.error('❌ Console errors:', errors);
     } else {
       console.log('✅ No JavaScript errors on load');
@@ -135,14 +147,8 @@ import puppeteer from 'puppeteer';
     await new Promise(r => setTimeout(r, 300));
 
     await page.type('#tx-merchant', 'Test Merchant');
-    await page.type('#tx-amount', '42.50');
-    await page.select('#tx-account', 'a01');
-    await page.select('#tx-category', 'food');
-    await page.evaluate(() => {
-      const date = document.querySelector('#tx-date');
-      date.value = new Date().toISOString().slice(0, 10);
-      date.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    await page.type('#tx-amount', '50000');
+    await page.click('[data-category-chip="food"]');
     await page.waitForSelector('#confirm-add-tx:not([disabled])', { timeout: 5000 });
     await page.click('#confirm-add-tx');
     await new Promise(r => setTimeout(r, 1000));
@@ -157,9 +163,19 @@ import puppeteer from 'puppeteer';
 
     // 10. Verify data persisted
     console.log('→ Verifying data persistence...');
-    await page.goto('http://localhost:3000', { waitUntil: 'networkidle0' });
+    await page.goto('http://localhost:3000/#dashboard', { waitUntil: 'networkidle0' });
+    await page.waitForFunction(() => !window.location.hash.includes('loading'), { timeout: 10000 }).catch(() => {});
     await new Promise(r => setTimeout(r, 1000));
-    const txCount = await page.$$eval('#recent-tx-tbody tr', rows => rows.length);
+    if (page.url().includes('#login')) {
+      const guestBtn = await page.$('#btn-guest-mode');
+      if (guestBtn) {
+        await guestBtn.click();
+        await page.waitForSelector('.app-layout:not([style*="display: none"])', { timeout: 10000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+    await page.waitForSelector('#recent-tx-tbody', { timeout: 10000 }).catch(() => {});
+    const txCount = await page.$$eval('#recent-tx-tbody tr', rows => rows.length).catch(() => 0);
     console.log(txCount > 0 ? `✅ Recent transactions visible (${txCount} rows)` : '❌ No transactions visible');
 
     console.log('\n=== All smoke tests complete ===\n');

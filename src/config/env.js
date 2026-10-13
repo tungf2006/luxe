@@ -9,13 +9,14 @@
  *   window.SUPABASE_CONFIG = { url: "...", anonKey: "..." }
  */
 
-const config = window.SUPABASE_CONFIG || {
+const globalObj = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : {});
+const config = globalObj.SUPABASE_CONFIG || {
   url: null,
   anonKey: null,
-  mockMode: true,
+  mockMode: false,
 };
 
 export const SUPABASE_URL = config.url || null;
 export const SUPABASE_ANON_KEY = config.anonKey || null;
-export const MOCK_MODE = config.mockMode ?? true;
+export const MOCK_MODE = config.mockMode ?? false;
 export const HAS_SUPABASE = !!SUPABASE_URL && !!SUPABASE_ANON_KEY && !MOCK_MODE;
